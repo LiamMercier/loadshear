@@ -4,6 +4,7 @@ add_executable(unit-tests
 
 target_link_libraries(unit-tests PRIVATE
     GTest::gtest_main
+    transports
 )
 
 include(GoogleTest)
