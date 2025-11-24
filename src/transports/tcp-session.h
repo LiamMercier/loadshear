@@ -20,7 +20,7 @@
 //    50000 | 195.31 MiB
 //   100000 | 390.63 MiB
 //
-constexpr size_t RING_BUFFER_SIZE = 4 * 1024;
+constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 
 namespace asio = boost::asio;
 
@@ -49,6 +49,8 @@ public:
 
     void do_read_header();
 
+    void do_read_body();
+
     void stop();
 
 private:
@@ -59,11 +61,32 @@ private:
     void handle_stream_error(boost::system::error_code ec);
 
 private:
+    const SessionConfig & config_;
+
+    //
     // Concurrency handling.
+    //
     asio::strand<asio::io_context::executor_type> strand_;
 
+    //
     // Packet management.
+    //
     tcp::socket socket_;
 
-    const SessionConfig & config_;
+    // Header + body size
+    std::vector<uint8_t> incoming_header_;
+    size_t next_payload_size_{0};
+
+    // Ring buffer to hold small messages
+    std::array<uint8_t, MESSAGE_BUFFER_SIZE> body_buffer_;
+
+    // Vector for large messages
+    //
+    // TODO <optimization>: a memory pool like Boost.pool would
+    // be better so we can avoid allocations on large messages.
+    std::vector<uint8_t> large_body_buffer_;
+
+    // Pointer to last server packet.
+    uint8_t *body_buffer_ptr_{nullptr};
+
 };
