@@ -27,6 +27,21 @@ void TCPSession::start(const std::vector<tcp::endpoint> & endpoints)
         }));
 }
 
+void TCPSession::stop()
+{
+    // TODO: stop the session and callback to the orchestrator
+}
+
+// on_connect runs inside of a strand.
+void TCPSession::on_connect()
+{
+    // Start the header read loop if setting is enabled.
+    if (config_.read_messages)
+    {
+        do_read_header();
+    }
+}
+
 void TCPSession::do_read_header()
 {
     asio::async_read(socket_,
@@ -72,19 +87,16 @@ void TCPSession::do_read_body()
                     return;
                 }
 
-                // TODO: user message handling
-
+                this->handle_message();
             }));
 }
 
-void TCPSession::on_connect()
+// Handles a server packet based on user set rules.
+void TCPSession::handle_message()
 {
-    // TODO: start header read
-}
+    // TODO: packet parsing interface
 
-void TCPSession::stop()
-{
-    // TODO: stop the session and callback to the orchestrator
+    // TODO: start header read while WASM work is posted to thread pool
 }
 
 void TCPSession::close_session()

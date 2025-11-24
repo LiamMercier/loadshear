@@ -47,14 +47,16 @@ public:
 
     void start(const std::vector<tcp::endpoint> & endpoints);
 
-    void do_read_header();
-
-    void do_read_body();
-
     void stop();
 
 private:
     void on_connect();
+
+    void do_read_header();
+
+    void do_read_body();
+
+    void handle_message();
 
     void close_session();
 
