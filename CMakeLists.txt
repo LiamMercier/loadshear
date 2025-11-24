@@ -27,4 +27,13 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
+find_package(Boost REQUIRED COMPONENTS
+    system
+)
+
+if(NOT Boost_FOUND)
+    message(FATAL_ERROR "Boost not found!")
+endif()
+
 add_subdirectory(tests)
+add_subdirectory(src/transports)
