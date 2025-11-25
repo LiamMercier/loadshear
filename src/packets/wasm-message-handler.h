@@ -9,12 +9,20 @@
 class WASMMessageHandler : public MessageHandler
 {
 public:
-    void parse_body_async(std::span<const uint8_t> buffer,
-                          std::function<void()> callback) override;
+    using HeaderParseFunction = std::function<HeaderResult(std::span<const uint8_t>)>;
 
-    void parse_header(std::span<const uint8_t> buffer) override;
+// Overrides
+public:
+    void parse_body_async(std::span<const uint8_t> buffer,
+                          std::function<void()> callback) const override;
+
+    HeaderResult parse_header(std::span<const uint8_t> buffer) const override;
 
     ~WASMMessageHandler() = default;
-private:
 
+public:
+    void set_header_parser(HeaderParseFunction parser);
+
+private:
+    HeaderParseFunction parse_header_func;
 };

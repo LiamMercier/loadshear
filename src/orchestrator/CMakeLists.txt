@@ -1,4 +1,4 @@
-add_library(orchestrator STATIC session-pool.cpp)
+add_library(orchestrator STATIC session-pool.h)
 
 target_include_directories(orchestrator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(orchestrator PUBLIC ${Boost_INCLUDE_DIRS})

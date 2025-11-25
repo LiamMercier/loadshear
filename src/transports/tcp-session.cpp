@@ -56,7 +56,17 @@ void TCPSession::do_read_header()
                     return;
                 }
 
-                // TODO: user defined message parsing to get message size
+                // User defined message parsing to get message size
+                std::span<const uint8_t> header_bytes(incoming_header_);
+                HeaderResult result = message_handler_.parse_header(header_bytes);
+
+                // Handle errors, should only occur if we have a WASM call.
+                if (result.status != HeaderResult::Status::OK)
+                {
+                    // TODO: handle errors.
+                }
+
+                next_payload_size_ = result.length;
 
                 // Handle the server sending messages that are too big.
                 if (next_payload_size_ > config_.payload_size_limit)
