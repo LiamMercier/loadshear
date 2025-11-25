@@ -6,7 +6,7 @@
 
 #include "message-handler-interface.h"
 
-class WASMMessageHandler : MessageHandler
+class WASMMessageHandler : public MessageHandler
 {
 public:
     void parse_body_async(std::span<const uint8_t> buffer,

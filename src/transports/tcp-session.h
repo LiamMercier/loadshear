@@ -6,6 +6,8 @@
 #include "session-config.h"
 #include "message-handler-interface.h"
 
+namespace asio = boost::asio;
+
 // We set the default ring buffer to 4 KiB for reading small messages.
 //
 // Expected memory usage:
@@ -23,8 +25,6 @@
 //
 constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 
-namespace asio = boost::asio;
-
 // Performance-aware TCP session class to be stored in a SessionPool.
 //
 // Assumptions:
@@ -36,6 +36,7 @@ class TCPSession
 {
 public:
     using tcp = asio::ip::tcp;
+    using endpoints = std::vector<tcp::endpoint>;
 
 public:
     TCPSession(asio::io_context & cntx,

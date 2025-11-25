@@ -2,8 +2,11 @@ add_executable(unit-tests
     main-tests.cpp
 )
 
+target_include_directories(unit-tests PUBLIC wasmtime)
+
 target_link_libraries(unit-tests PRIVATE
     GTest::gtest_main
+    wasmtime
     transports
     packets
     orchestrator

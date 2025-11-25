@@ -1,7 +1,15 @@
 #include <gtest/gtest.h>
 
-TEST(ExampleTest, FailCase)
+#include "wasm-message-handler.h"
+#include "tcp-session.h"
+#include "session-pool.h"
+
+TEST(SessionPoolTests, TCPPool)
 {
-    EXPECT_EQ(0, 1);
-    ASSERT_EQ(0, 2);
+    SessionConfig config(8, 12288, true);
+    WASMMessageHandler handler;
+    asio::io_context cntx;
+
+    SessionPool<TCPSession> pool(cntx, config);
+    pool.create_sessions(100, cntx, config, handler);
 }
