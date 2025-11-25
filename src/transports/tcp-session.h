@@ -36,7 +36,7 @@ class TCPSession
 {
 public:
     using tcp = asio::ip::tcp;
-    using endpoints = std::vector<tcp::endpoint>;
+    using Endpoints = std::vector<tcp::endpoint>;
 
 public:
     TCPSession(asio::io_context & cntx,
@@ -49,7 +49,7 @@ public:
     TCPSession(const TCPSession &&) = delete;
     TCPSession & operator=(const TCPSession &&) = delete;
 
-    void start(const std::vector<tcp::endpoint> & endpoints);
+    void start(const Endpoints & endpoints);
 
     void stop();
 

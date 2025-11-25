@@ -14,7 +14,7 @@ class SessionPool
 {
     static_assert(std::is_invocable_v<decltype(&Session::start),
                                       Session &,
-                                      const typename Session::endpoints &>,
+                                      const typename Session::Endpoints &>,
                   "Session is missing start()");
 
 public:
@@ -43,11 +43,6 @@ public:
         ::operator delete(sessions_);
     }
 
-    void set_config(const SessionConfig & config)
-    {
-        config_ = config;
-    }
-
     template<typename... Args>
     void create_sessions(size_t session_count, Args&&... args)
     {
@@ -63,11 +58,19 @@ public:
         // Try to allocate on the heap for session_count session objects.
         sessions_ = static_cast<Session*>(::operator new(sizeof(Session) * pool_size_));
 
-        for (size_t i = 0; i < session_count; i++)
+        for (size_t i = 0; i < pool_size_; i++)
         {
             new (&sessions_[i]) Session(std::forward<Args>(args)...);
         }
 
+    }
+
+    void start_all_sessions(const Session::Endpoints & endpoints)
+    {
+        for (size_t i = 0; i < pool_size_; i++)
+        {
+            sessions_[i].start(endpoints);
+        }
     }
 
 private:

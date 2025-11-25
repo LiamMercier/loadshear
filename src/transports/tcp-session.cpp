@@ -1,5 +1,8 @@
 #include "tcp-session.h"
 
+// TODO: remove
+#include <iostream>
+
 TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler)
@@ -11,7 +14,7 @@ message_handler_(message_handler)
 {
 }
 
-void TCPSession::start(const std::vector<tcp::endpoint> & endpoints)
+void TCPSession::start(const Endpoints & endpoints)
 {
     asio::async_connect(socket_, endpoints,
         asio::bind_executor(strand_,
@@ -63,7 +66,9 @@ void TCPSession::do_read_header()
                 // Handle errors, should only occur if we have a WASM call.
                 if (result.status != HeaderResult::Status::OK)
                 {
-                    // TODO: handle errors.
+                    next_payload_size_ = 0;
+                    this->do_read_header();
+                    return;
                 }
 
                 next_payload_size_ = result.length;
@@ -85,6 +90,10 @@ void TCPSession::do_read_body()
     {
         large_body_buffer_.resize(next_payload_size_);
         body_buffer_ptr_ = large_body_buffer_.data();
+    }
+    else
+    {
+        body_buffer_ptr_ = body_buffer_.data();
     }
 
     asio::async_read(socket_,
