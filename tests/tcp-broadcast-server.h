@@ -85,13 +85,18 @@ private:
                     if (ec)
                     {
                         clients_.erase(session);
+                        return;
                     }
+
+                    lifetime_sends_ += 1;
             });
         }
 
     }
 public:
     size_t lifetime_connections_{0};
+    size_t lifetime_sends_{0};
+    size_t lifetime_received_{0};
 
 private:
     asio::io_context & cntx_;

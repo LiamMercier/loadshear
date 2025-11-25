@@ -83,14 +83,20 @@ TEST(SessionPoolTests, TCPPool)
         cntx.stop();
     });
 
+    pool.stop_all_sessions();
+
     cntx.run();
 
     // Asserts after we finish testing.
-    EXPECT_EQ(N_Sessions, server.lifetime_connections_) << "Server only accepted "
+    EXPECT_EQ(server.lifetime_connections_, N_Sessions) << "Server only accepted "
                                                         << server.lifetime_connections_
                                                         << " of "
                                                         << N_Sessions
                                                         << "requests!";
+
+    EXPECT_EQ(pool.active_sessions(), 0) << "Pool still has "
+                                         << pool.active_sessions()
+                                         << " active!";
 
     server_cntx.stop();
     if (server_thread.joinable())

@@ -38,10 +38,13 @@ public:
     using tcp = asio::ip::tcp;
     using Endpoints = std::vector<tcp::endpoint>;
 
+    using DisconnectCallback = std::function<void()>;
+
 public:
     TCPSession(asio::io_context & cntx,
                const SessionConfig & config,
-               const MessageHandler & message_handler);
+               const MessageHandler & message_handler,
+               DisconnectCallback & on_disconnect);
 
     // This class should not be moved or copied.
     TCPSession(const TCPSession &) = delete;
@@ -52,6 +55,12 @@ public:
     void start(const Endpoints & endpoints);
 
     void stop();
+
+    void halt();
+
+    // TODO: add messages to send
+
+    // TODO: write loop
 
 private:
     void on_connect();
@@ -97,5 +106,5 @@ private:
 
     // Reference to the thread's message handler interface.
     const MessageHandler & message_handler_;
-
+    const DisconnectCallback & on_disconnect_;
 };

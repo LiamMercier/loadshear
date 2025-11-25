@@ -5,12 +5,14 @@
 
 TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
-                       const MessageHandler & message_handler)
+                       const MessageHandler & message_handler,
+                       DisconnectCallback & on_disconnect)
 :config_(config),
 strand_(cntx.get_executor()),
 socket_(cntx),
 incoming_header_(config_.header_size),
-message_handler_(message_handler)
+message_handler_(message_handler),
+on_disconnect_(on_disconnect)
 {
 }
 
@@ -31,9 +33,20 @@ void TCPSession::start(const Endpoints & endpoints)
         }));
 }
 
+// Stop the session and callback to the orchestrator
 void TCPSession::stop()
 {
-    // TODO: stop the session and callback to the orchestrator
+    asio::post(strand_, [this]{
+        this->close_session();
+    });
+}
+
+// Forcefully stop, ignoring all data to be sent.
+void TCPSession::halt()
+{
+    asio::dispatch(strand_, [this]{
+        this->close_session();
+    });
 }
 
 // on_connect runs inside of a strand.
@@ -121,7 +134,11 @@ void TCPSession::handle_message()
 
 void TCPSession::close_session()
 {
+    boost::system::error_code ignored;
 
+    this->socket_.cancel();
+
+    on_disconnect_();
 }
 
 void TCPSession::handle_stream_error(boost::system::error_code ec)
