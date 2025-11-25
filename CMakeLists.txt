@@ -40,4 +40,5 @@ endif()
 
 add_subdirectory(src/packets)
 add_subdirectory(src/transports)
+add_subdirectory(src/orchestrator)
 add_subdirectory(tests)

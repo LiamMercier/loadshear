@@ -1,15 +1,16 @@
 #include "tcp-session.h"
 
 TCPSession::TCPSession(asio::io_context & cntx,
-                       const SessionConfig & config)
+                       const SessionConfig & config,
+                       const MessageHandler & message_handler)
 :config_(config),
 strand_(cntx.get_executor()),
 socket_(cntx),
-incoming_header_(config_.header_size)
+incoming_header_(config_.header_size),
+message_handler_(message_handler)
 {
 }
 
-// TODO: check parser is not null before starting
 void TCPSession::start(const std::vector<tcp::endpoint> & endpoints)
 {
     asio::async_connect(socket_, endpoints,

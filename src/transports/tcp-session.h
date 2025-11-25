@@ -4,6 +4,7 @@
 #include <boost/asio/ip/tcp.hpp>
 
 #include "session-config.h"
+#include "message-handler-interface.h"
 
 // We set the default ring buffer to 4 KiB for reading small messages.
 //
@@ -30,6 +31,7 @@ namespace asio = boost::asio;
 // - The underlying SessionPool will not destroy the session until session is safely closed
 // - Messages that are shared across session instances are read only
 // - Server packets will use an abstract interface to parse using user-defined WASM or defaults
+// - MessageInterface is alive until all Sessions in the SessionPool are destroyed
 class TCPSession
 {
 public:
@@ -37,7 +39,8 @@ public:
 
 public:
     TCPSession(asio::io_context & cntx,
-               const SessionConfig & config);
+               const SessionConfig & config,
+               const MessageHandler & message_handler);
 
     // This class should not be moved or copied.
     TCPSession(const TCPSession &) = delete;
@@ -88,7 +91,10 @@ private:
     // be better so we can avoid allocations on large messages.
     std::vector<uint8_t> large_body_buffer_;
 
-    // Pointer to last server packet.
+    // Pointer to last server packet (fixed array or vector).
     uint8_t *body_buffer_ptr_{nullptr};
+
+    // Reference to the thread's message handler interface.
+    const MessageHandler & message_handler_;
 
 };
