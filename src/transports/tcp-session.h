@@ -28,10 +28,11 @@ constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 // Performance-aware TCP session class to be stored in a SessionPool.
 //
 // Assumptions:
-// - The underlying SessionPool will not destroy the session until session is safely closed
+// - The underlying SessionPool will not destroy the session until it has been safely closed
 // - Messages that are shared across session instances are read only
 // - Server packets will use an abstract interface to parse using user-defined WASM or defaults
 // - MessageInterface is alive until all Sessions in the SessionPool are destroyed
+// - SessionPool will not call any other operations after stop() or halt() are called
 class TCPSession
 {
 public:
@@ -82,6 +83,7 @@ private:
     // Concurrency handling.
     //
     asio::strand<asio::io_context::executor_type> strand_;
+    bool live_{false};
 
     //
     // Packet management.

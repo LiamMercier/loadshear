@@ -52,6 +52,8 @@ void TCPSession::halt()
 // on_connect runs inside of a strand.
 void TCPSession::on_connect()
 {
+    live_ = true;
+
     // Start the header read loop if setting is enabled.
     if (config_.read_messages)
     {
@@ -127,18 +129,28 @@ void TCPSession::do_read_body()
 // Handles a server packet based on user set rules.
 void TCPSession::handle_message()
 {
-    // TODO: packet parsing interface
 
-    // TODO: start header read while WASM work is posted to thread pool
+    // TODO: figure out callback
+
 }
 
 void TCPSession::close_session()
 {
+    if (!live_)
+    {
+        return;
+    }
+
     boost::system::error_code ignored;
 
     this->socket_.cancel();
 
-    on_disconnect_();
+    // Call on_disconnect_ once every other handler has run.
+    //
+    // This assumes that the pool SHALL NOT call any other functions in
+    asio::post(strand_, [this]{
+        this->on_disconnect_();
+    });
 }
 
 void TCPSession::handle_stream_error(boost::system::error_code ec)
