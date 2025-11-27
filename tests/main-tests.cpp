@@ -68,7 +68,7 @@ TEST(SessionPoolTests, TCPPool)
 
     PayloadManager payload_manager;
 
-    SessionPool<TCPSession> pool(cntx, config);
+    SessionPool<TCPSession> pool(cntx, config, [](){});
 
     pool.create_sessions(N_Sessions, cntx, config, handler, payload_manager);
 
@@ -113,7 +113,7 @@ TEST(SessionPoolTests, TCPPool)
 // Test what happens when we create and destroy pools repeatedly.
 TEST(SessionPoolTests, TCPPoolDestruction)
 {
-    // Mock Controller, since we don't have one implemented right now.
+    // Mock Controller
     SessionConfig config(4, 12288, true);
 
     // Create custom header parsing function.
@@ -162,7 +162,7 @@ TEST(SessionPoolTests, TCPPoolDestruction)
     {
         asio::io_context cntx;
 
-        SessionPool<TCPSession> pool(cntx, config);
+        SessionPool<TCPSession> pool(cntx, config, [](){});
 
         pool.create_sessions(1, cntx, config, handler, payload_manager);
 
@@ -198,7 +198,7 @@ TEST(SessionPoolTests, TCPPoolDestruction)
     {
         asio::io_context cntx;
 
-        SessionPool<TCPSession> pool(cntx, config);
+        SessionPool<TCPSession> pool(cntx, config, [](){});
 
         pool.create_sessions(1, cntx, config, handler, payload_manager);
 
@@ -229,6 +229,156 @@ TEST(SessionPoolTests, TCPPoolDestruction)
     EXPECT_EQ(pool_ne, false) << "Pool had active sessions in one or more cycles (test 2)!";
 
     server_cntx.stop();
+    if (server_thread.joinable())
+    {
+        server_thread.join();
+    }
+}
+
+TEST(SessionPoolTests, MultiplePoolStartup)
+{
+    uint64_t server_interval_ms = 500;
+
+    // Startup basic TCP server.
+    asio::io_context server_cntx;
+    asio::ip::tcp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
+
+    TCPBroadcastServer server(server_cntx, server_ep, server_interval_ms);
+
+    std::thread server_thread([&]
+    {
+        server.start();
+        server_cntx.run();
+    });
+
+    // One thread pool shared across all pools
+    auto thread_count = std::thread::hardware_concurrency();
+
+    if (thread_count == 0)
+    {
+        thread_count = 2;
+    }
+
+    asio::io_context cntx;
+    auto work_guard = asio::make_work_guard(cntx);
+
+    std::vector<std::thread> controller_threads;
+    controller_threads.reserve(thread_count);
+
+    // Create custom header parsing function.
+    WASMMessageHandler handler;
+    std::array<bool, 4> bytes_to_read{0,0,0,1};
+
+    handler.set_header_parser([bytes_to_read](std::span<const uint8_t> buffer) -> HeaderResult
+    {
+        size_t size = 0;
+
+        for (size_t i = 0; i < bytes_to_read.size(); i++)
+        {
+            if (bytes_to_read[i])
+            {
+                size <<= 8;
+                size |= buffer[i];
+            }
+        }
+
+        return {size, HeaderResult::Status::OK};
+    });
+
+    // Empty payload manager.
+    PayloadManager payload_manager;
+
+    // Make it so we can simulate the controller deciding to delete the pool.
+    //
+    // Otherwise in our test it will go out of scope too soon.
+    SessionPool<TCPSession> *pool1_ptr = nullptr;
+
+    auto on_closed_1 = [&cntx, &pool1_ptr](){
+        cntx.post([&pool1_ptr]{
+            EXPECT_EQ(pool1_ptr->active_sessions(), 0) << "Pool still has "
+                                                       << pool1_ptr->active_sessions()
+                                                       << " active!";
+            delete pool1_ptr;
+            pool1_ptr = nullptr;
+        });
+    };
+
+    // First SessionPool using TCPSession objects.
+    {
+        size_t N_sessions = 500;
+        SessionConfig config(4, 12288, true);
+
+        pool1_ptr = new SessionPool<TCPSession>(cntx, config, on_closed_1);
+
+        pool1_ptr->create_sessions(N_sessions, cntx, config, handler, payload_manager);
+
+        const TCPSession::Endpoints endpoints{
+                TCPSession::tcp::endpoint(
+                    asio::ip::make_address("127.0.0.1"),
+                    12345
+                )};
+
+        pool1_ptr->start_all_sessions(endpoints);
+        pool1_ptr->stop_all_sessions();
+    }
+
+    SessionPool<TCPSession> *pool2_ptr = nullptr;
+
+    auto on_closed_2 = [&cntx, &pool2_ptr](){
+        cntx.post([&pool2_ptr]{
+            EXPECT_EQ(pool2_ptr->active_sessions(), 0) << "Pool still has "
+                                                       << pool2_ptr->active_sessions()
+                                                       << " active!";
+            delete pool2_ptr;
+            pool2_ptr = nullptr;
+        });
+    };
+
+    // Second SessionPool using TCPSession objects.
+    {
+        size_t N_sessions = 300;
+        SessionConfig config(4, 12288, true);
+
+        pool2_ptr = new SessionPool<TCPSession>(cntx, config, on_closed_2);
+
+        pool2_ptr->create_sessions(N_sessions, cntx, config, handler, payload_manager);
+
+        const TCPSession::Endpoints endpoints{
+                TCPSession::tcp::endpoint(
+                    asio::ip::make_address("127.0.0.1"),
+                    12345
+                )};
+
+        pool2_ptr->start_all_sessions(endpoints);
+        pool2_ptr->stop_all_sessions();
+    }
+
+    // Start timer on threads to eventually exit.
+    asio::steady_timer stop_timer(cntx, std::chrono::seconds(5));
+    stop_timer.async_wait([&](const boost::system::error_code &)
+    {
+        cntx.stop();
+    });
+
+    // Start the pool.
+    for (unsigned int i = 0; i < thread_count; i++)
+    {
+        controller_threads.emplace_back([&]{
+            cntx.run();
+        });
+    }
+
+    // Join threads.
+    for (auto & thread : controller_threads)
+    {
+        if (thread.joinable())
+        {
+            thread.join();
+        }
+    }
+
+    server_cntx.stop();
+
     if (server_thread.joinable())
     {
         server_thread.join();

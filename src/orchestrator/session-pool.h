@@ -27,10 +27,15 @@ class SessionPool
                   "Session is missing halt()");
 
 public:
+    using NotifyClosed = std::function<void()>;
+
+public:
     SessionPool(asio::io_context & cntx,
-                const SessionConfig & config)
+                const SessionConfig & config,
+                NotifyClosed notify_closed)
     :cntx_(cntx),
-    config_(config)
+    config_(config),
+    notify_closed_(notify_closed)
     {
     }
 
@@ -110,6 +115,24 @@ private:
             // Handle anything that should happen when all sessions are done.
             //
             // This should not be synchronous with the callback.
+            bool expected = false;
+            if(closed_.compare_exchange_strong(expected, true))
+            {
+                notify_closed_();
+            }
+
+
+// Warn anyone who compiled a debug version of the code.
+#ifdef DEV_BUILD
+// TODO <feature>: replace with logger.
+#include <iostream>
+            else
+            {
+                std::cout << "SessionPool had two disconnect callbacks at 0 active sessions!\n";
+            }
+#endif
+
+
         }
     }
 
@@ -129,4 +152,7 @@ private:
     // Count the number of active sessions.
     std::atomic<size_t> active_sessions_{0};
 
+    // Callback function for when all session's are closed.
+    std::atomic<bool> closed_{false};
+    NotifyClosed notify_closed_;
 };
