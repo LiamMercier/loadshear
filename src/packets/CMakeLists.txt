@@ -1,4 +1,4 @@
-add_library(packets STATIC wasm-message-handler.cpp)
+add_library(packets STATIC wasm-message-handler.cpp payload-manager.cpp)
 
 target_include_directories(packets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(packets PUBLIC ${Boost_INCLUDE_DIRS})

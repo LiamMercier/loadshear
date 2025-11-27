@@ -22,7 +22,7 @@ class SessionPool
                                       Session &>,
                   "Session is missing stop()");
 
-    static_assert(std::is_invocable_v<decltype(&Session::stop),
+    static_assert(std::is_invocable_v<decltype(&Session::halt),
                                       Session &>,
                   "Session is missing halt()");
 
@@ -74,8 +74,6 @@ public:
             new (&sessions_[i]) Session(std::forward<Args>(args)..., on_done_callback_);
         }
 
-        active_sessions_ = session_count;
-
     }
 
     void start_all_sessions(const Session::Endpoints & endpoints)
@@ -84,6 +82,8 @@ public:
         {
             sessions_[i].start(endpoints);
         }
+
+        active_sessions_ = pool_size_;
     }
 
     void stop_all_sessions()
@@ -108,6 +108,8 @@ private:
         if (active_sessions_ == 0)
         {
             // Handle anything that should happen when all sessions are done.
+            //
+            // This should not be synchronous with the callback.
         }
     }
 

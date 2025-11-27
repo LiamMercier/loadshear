@@ -6,31 +6,50 @@
 TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,
+                       const PayloadManager & payload_manager,
                        DisconnectCallback & on_disconnect)
 :config_(config),
 strand_(cntx.get_executor()),
 socket_(cntx),
 incoming_header_(config_.header_size),
 message_handler_(message_handler),
+payload_manager_(payload_manager),
 on_disconnect_(on_disconnect)
 {
 }
 
 void TCPSession::start(const Endpoints & endpoints)
 {
-    asio::async_connect(socket_, endpoints,
-        asio::bind_executor(strand_,
-            [this](boost::system::error_code ec,
-                   tcp::endpoint ep){
+    asio::post(strand_, [this, endpoints]{
+        connecting_ = true;
+        live_ = true;
+        pending_ops_++;
 
-            // If we failed to connect, stop.
-            if (ec)
-            {
-                return;
-            }
+        asio::async_connect(socket_, endpoints,
+            asio::bind_executor(strand_,
+                [this](boost::system::error_code ec,
+                    tcp::endpoint ep){
 
-            this->on_connect();
-        }));
+                pending_ops_--;
+                connecting_ = false;
+
+                // Check if we need to exit now.
+                if(should_disconnect())
+                {
+                    on_disconnect_();
+                    return;
+                }
+
+                // If we failed to connect, stop.
+                if (ec)
+                {
+                    this->close_session();
+                    return;
+                }
+
+                this->on_connect();
+            }));
+    });
 }
 
 // Stop the session and callback to the orchestrator
@@ -52,8 +71,6 @@ void TCPSession::halt()
 // on_connect runs inside of a strand.
 void TCPSession::on_connect()
 {
-    live_ = true;
-
     // Start the header read loop if setting is enabled.
     if (config_.read_messages)
     {
@@ -61,12 +78,21 @@ void TCPSession::on_connect()
     }
 }
 
+// do_read_header runs inside of a strand
 void TCPSession::do_read_header()
 {
+    pending_ops_++;
+
     asio::async_read(socket_,
         asio::buffer(incoming_header_, config_.header_size),
         asio::bind_executor(strand_,
             [this](boost::system::error_code ec, std::size_t){
+                pending_ops_--;
+                if(should_disconnect())
+                {
+                    on_disconnect_();
+                    return;
+                }
 
                 if (ec)
                 {
@@ -99,6 +125,7 @@ void TCPSession::do_read_header()
         }));
 }
 
+// do_read_body runs inside a strand
 void TCPSession::do_read_body()
 {
     if (next_payload_size_ > MESSAGE_BUFFER_SIZE)
@@ -111,10 +138,18 @@ void TCPSession::do_read_body()
         body_buffer_ptr_ = body_buffer_.data();
     }
 
+    pending_ops_++;
+
     asio::async_read(socket_,
         asio::buffer(body_buffer_ptr_, next_payload_size_),
         asio::bind_executor(strand_,
             [this](boost::system::error_code ec, size_t){
+                pending_ops_--;
+                if(should_disconnect())
+                {
+                    on_disconnect_();
+                    return;
+                }
 
                 if (ec)
                 {
@@ -134,23 +169,27 @@ void TCPSession::handle_message()
 
 }
 
+// close_session runs in a strand
 void TCPSession::close_session()
 {
-    if (!live_)
+    if (!live_ && !connecting_)
     {
         return;
     }
 
     boost::system::error_code ignored;
+    socket_.cancel(ignored);
+    socket_.close(ignored);
 
-    this->socket_.cancel();
+    live_ = false;
 
     // Call on_disconnect_ once every other handler has run.
     //
-    // This assumes that the pool SHALL NOT call any other functions in
-    asio::post(strand_, [this]{
-        this->on_disconnect_();
-    });
+    // This assumes that the pool SHALL NOT call any other functions after.
+    if (pending_ops_ == 0)
+    {
+        on_disconnect_();
+    }
 }
 
 void TCPSession::handle_stream_error(boost::system::error_code ec)

@@ -11,10 +11,12 @@ public:
     using tcp = asio::ip::tcp;
 
     TCPBroadcastServer(asio::io_context & cntx,
-                       tcp::endpoint endpoint)
+                       tcp::endpoint endpoint,
+                       uint64_t broadcast_interval_ms)
     :cntx_(cntx),
     acceptor_(cntx, endpoint),
-    timer_(cntx)
+    timer_(cntx),
+    broadcast_interval_ms_(broadcast_interval_ms)
     {
     }
 
@@ -57,7 +59,7 @@ private:
 
     void start_broadcast_timer()
     {
-        timer_.expires_after(std::chrono::seconds(1));
+        timer_.expires_after(std::chrono::milliseconds(broadcast_interval_ms_));
 
         timer_.async_wait([this](std::error_code ec){
             if (!ec)
@@ -102,6 +104,8 @@ private:
     asio::io_context & cntx_;
     tcp::acceptor acceptor_;
     asio::steady_timer timer_;
+
+    uint64_t broadcast_interval_ms_;
 
     std::unordered_set<std::shared_ptr<BasicSession>> clients_;
 };

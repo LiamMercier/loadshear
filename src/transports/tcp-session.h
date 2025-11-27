@@ -5,6 +5,7 @@
 
 #include "session-config.h"
 #include "message-handler-interface.h"
+#include "payload-manager.h"
 
 namespace asio = boost::asio;
 
@@ -28,11 +29,16 @@ constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 // Performance-aware TCP session class to be stored in a SessionPool.
 //
 // Assumptions:
-// - The underlying SessionPool will not destroy the session until it has been safely closed
-// - Messages that are shared across session instances are read only
-// - Server packets will use an abstract interface to parse using user-defined WASM or defaults
-// - MessageInterface is alive until all Sessions in the SessionPool are destroyed
-// - SessionPool will not call any other operations after stop() or halt() are called
+//
+// - The underlying SessionPool MUST NOT destroy the session until it has been safely closed
+// - SessionPool MUST NOT call any other operations after stop() or halt() are called
+// - SessionPool MUST NOT destroy itself or any references passed until every session has closed
+//      - Sessions are considered closed as soon as they call on_disconnect_
+//      - SessionPool MAY decide to delay destruction after all sessions are closed
+// - Sessions MUST NOT do any work once closed (object may be destroyed)
+// - Payloads that are shared across session instances are read only
+// - Server packets are handled by an interface passed to the session.
+//
 class TCPSession
 {
 public:
@@ -45,6 +51,7 @@ public:
     TCPSession(asio::io_context & cntx,
                const SessionConfig & config,
                const MessageHandler & message_handler,
+               const PayloadManager & payload_manager,
                DisconnectCallback & on_disconnect);
 
     // This class should not be moved or copied.
@@ -76,6 +83,8 @@ private:
 
     void handle_stream_error(boost::system::error_code ec);
 
+    inline bool should_disconnect();
+
 private:
     const SessionConfig & config_;
 
@@ -84,6 +93,8 @@ private:
     //
     asio::strand<asio::io_context::executor_type> strand_;
     bool live_{false};
+    bool connecting_{false};
+    size_t pending_ops_{0};
 
     //
     // Packet management.
@@ -108,5 +119,15 @@ private:
 
     // Reference to the thread's message handler interface.
     const MessageHandler & message_handler_;
+
+    // Reference to the Controller's payload manager.
+    const PayloadManager & payload_manager_;
+
+    //
     const DisconnectCallback & on_disconnect_;
 };
+
+inline bool TCPSession::should_disconnect()
+{
+    return (!live_ && pending_ops_ == 0);
+}

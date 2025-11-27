@@ -1,6 +1,10 @@
 #pragma once
 
 #include <vector>
+#include <atomic>
+#include <span>
+
+#include <boost/asio.hpp>
 
 struct PayloadCounter
 {
@@ -48,7 +52,7 @@ struct PreparedPayload
     PreparedPayload& operator=(PreparedPayload&&) = default;
 
     // Prevent copies.
-    PreparedPayload(const PreparedPayload) = delete;
+    PreparedPayload(const PreparedPayload &) = delete;
     PreparedPayload & operator=(const PreparedPayload &) = delete;
 
     // Dynamic bytes we inserted (counters, timestamps).
