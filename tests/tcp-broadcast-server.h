@@ -33,9 +33,11 @@ private:
     {
         tcp::socket socket;
         std::vector<uint8_t> write_buffer;
+        std::vector<uint8_t> read_buffer;
 
         explicit BasicSession(asio::io_context & cntx)
-        :socket(cntx)
+        :socket(cntx),
+        read_buffer(1024*4)
         {
 
         }
@@ -46,22 +48,46 @@ private:
         auto session = std::make_shared<BasicSession>(cntx_);
 
         acceptor_.async_accept(session->socket,
-            [this, session](std::error_code ec){
+            [this, session](boost::system::error_code ec){
             if (!ec)
             {
-                clients_.insert(session);
+                {
+                    std::lock_guard<std::mutex> lock(clients_mutex_);
+                    clients_.insert(session);
+                }
                 lifetime_connections_ += 1;
+
+                start_read(session);
             }
 
             start_accept();
         });
     }
 
+    // Loop reads that just record the total data received.
+    void start_read(std::shared_ptr<BasicSession> session)
+    {
+        session->socket.async_read_some(
+            asio::buffer(session->read_buffer),
+                [this, session](boost::system::error_code ec, size_t s){
+                   if (ec)
+                   {
+                       std::lock_guard<std::mutex> lock(clients_mutex_);
+                       clients_.erase(session);
+                       return;
+                    }
+
+                    lifetime_received_.fetch_add(s, std::memory_order_relaxed);
+
+                    start_read(session);
+                });
+    }
+
     void start_broadcast_timer()
     {
         timer_.expires_after(std::chrono::milliseconds(broadcast_interval_ms_));
 
-        timer_.async_wait([this](std::error_code ec){
+        timer_.async_wait([this](boost::system::error_code ec){
             if (!ec)
             {
                 broadcast_heartbeat();
@@ -74,31 +100,37 @@ private:
     {
         static const uint8_t packet[8] = { 0x1, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0 };
 
+        std::lock_guard<std::mutex> lock(clients_mutex_);
+
         for (auto it = clients_.begin(); it != clients_.end(); it++)
         {
             auto session = *it;
 
             session->write_buffer.assign(packet, packet + 8);
 
+            lifetime_broadcasts_.fetch_add(1);
+
             asio::async_write(
                 session->socket,
                 asio::buffer(session->write_buffer),
-                [this, session](std::error_code ec, std::size_t){
+                [this, session](boost::system::error_code ec, std::size_t){
                     if (ec)
                     {
+                        std::lock_guard<std::mutex> lock(clients_mutex_);
                         clients_.erase(session);
                         return;
                     }
 
-                    lifetime_sends_ += 1;
+                    lifetime_sent_.fetch_add(8, std::memory_order_relaxed);
             });
         }
 
     }
 public:
     size_t lifetime_connections_{0};
-    size_t lifetime_sends_{0};
-    size_t lifetime_received_{0};
+    std::atomic<size_t> lifetime_broadcasts_{0};
+    std::atomic<size_t> lifetime_sent_{0};
+    std::atomic<size_t> lifetime_received_{0};
 
 private:
     asio::io_context & cntx_;
@@ -107,5 +139,6 @@ private:
 
     uint64_t broadcast_interval_ms_;
 
+    std::mutex clients_mutex_;
     std::unordered_set<std::shared_ptr<BasicSession>> clients_;
 };

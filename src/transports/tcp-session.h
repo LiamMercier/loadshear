@@ -3,9 +3,12 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <deque>
+
 #include "session-config.h"
 #include "message-handler-interface.h"
 #include "payload-manager.h"
+#include "response-packet.h"
 
 namespace asio = boost::asio;
 
@@ -62,13 +65,11 @@ public:
 
     void start(const Endpoints & endpoints);
 
+    void flood();
+
     void stop();
 
     void halt();
-
-    // TODO: add messages to send
-
-    // TODO: write loop
 
 private:
     void on_connect();
@@ -77,6 +78,8 @@ private:
 
     void do_read_body();
 
+    void do_write_response();
+
     void handle_message();
 
     void close_session();
@@ -84,6 +87,8 @@ private:
     void handle_stream_error(boost::system::error_code ec);
 
     inline bool should_disconnect();
+
+public:
 
 private:
     const SessionConfig & config_;
@@ -94,6 +99,7 @@ private:
     asio::strand<asio::io_context::executor_type> strand_;
     bool live_{false};
     bool connecting_{false};
+    bool flood_{false};
     size_t pending_ops_{0};
 
     //
@@ -116,6 +122,12 @@ private:
 
     // Pointer to last server packet (fixed array or vector).
     uint8_t *body_buffer_ptr_{nullptr};
+
+    std::deque<ResponsePacket> responses_;
+
+    //
+    // Handlers
+    //
 
     // Reference to the thread's message handler interface.
     const MessageHandler & message_handler_;

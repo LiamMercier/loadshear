@@ -303,10 +303,13 @@ TEST(SessionPoolTests, MultiplePoolStartup)
         });
     };
 
+    asio::steady_timer stop_pool1_timer(cntx, std::chrono::seconds(1));
+
+    SessionConfig config(4, 12288, true);
+
     // First SessionPool using TCPSession objects.
     {
         size_t N_sessions = 500;
-        SessionConfig config(4, 12288, true);
 
         pool1_ptr = new SessionPool<TCPSession>(cntx, config, on_closed_1);
 
@@ -319,7 +322,16 @@ TEST(SessionPoolTests, MultiplePoolStartup)
                 )};
 
         pool1_ptr->start_all_sessions(endpoints);
-        pool1_ptr->stop_all_sessions();
+
+        stop_pool1_timer.async_wait([&](const boost::system::error_code &)
+        {
+            if (!pool1_ptr)
+            {
+                return;
+            }
+
+            pool1_ptr->stop_all_sessions();
+        });
     }
 
     SessionPool<TCPSession> *pool2_ptr = nullptr;
@@ -334,10 +346,11 @@ TEST(SessionPoolTests, MultiplePoolStartup)
         });
     };
 
+    asio::steady_timer stop_pool2_timer(cntx, std::chrono::seconds(1));
+
     // Second SessionPool using TCPSession objects.
     {
         size_t N_sessions = 300;
-        SessionConfig config(4, 12288, true);
 
         pool2_ptr = new SessionPool<TCPSession>(cntx, config, on_closed_2);
 
@@ -350,7 +363,16 @@ TEST(SessionPoolTests, MultiplePoolStartup)
                 )};
 
         pool2_ptr->start_all_sessions(endpoints);
-        pool2_ptr->stop_all_sessions();
+
+        stop_pool2_timer.async_wait([&](const boost::system::error_code &)
+        {
+            if (!pool2_ptr)
+            {
+                return;
+            }
+
+            pool2_ptr->stop_all_sessions();
+        });
     }
 
     // Start timer on threads to eventually exit.
@@ -383,4 +405,8 @@ TEST(SessionPoolTests, MultiplePoolStartup)
     {
         server_thread.join();
     }
+
+    std::cout << "Server received "
+            << server.lifetime_received_
+            << " bytes\n";
 }

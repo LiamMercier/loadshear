@@ -52,6 +52,14 @@ void TCPSession::start(const Endpoints & endpoints)
     });
 }
 
+// Request enabling flood.
+void TCPSession::flood()
+{
+    asio::post(strand_, [this]{
+        // TODO: do_flood();
+    });
+}
+
 // Stop the session and callback to the orchestrator
 void TCPSession::stop()
 {
@@ -161,11 +169,83 @@ void TCPSession::do_read_body()
             }));
 }
 
+// Write a response back to the server.
+//
+// This function runs in a strand.
+void TCPSession::do_write_response()
+{
+    pending_ops_++;
+
+    // Grab the next packet to write.
+    ResponsePacket packet = responses_.front();
+    responses_.pop_front();
+
+    asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
+        asio::bind_executor(strand_,
+            [this](boost::system::error_code ec, size_t s)
+            {
+                pending_ops_--;
+                if (should_disconnect())
+                {
+                    on_disconnect_();
+                    return;
+                }
+
+                if (ec)
+                {
+                    handle_stream_error(ec);
+                    return;
+                }
+
+                // Post another write if more responses exist.
+                //
+                // Our message adding callback doesn't need to check
+                // since it is on the strand and adds a message.
+                if (!responses_.empty())
+                {
+                    pending_ops_++;
+                    asio::post(strand_,
+                        [this]() {
+                            pending_ops_--;
+
+                            if (should_disconnect())
+                            {
+                                on_disconnect_();
+                                return;
+                            }
+                            do_write_response();
+                    });
+                }
+
+            }));
+}
+
 // Handles a server packet based on user set rules.
 void TCPSession::handle_message()
 {
+    pending_ops_++;
 
-    // TODO: figure out callback
+    message_handler_.parse_body_async(
+        std::span<const uint8_t>(body_buffer_ptr_, body_buffer_ptr_ + next_payload_size_),
+        [this](ResponsePacket response_packet) {
+            asio::post(strand_, [this, response_packet]() {
+                pending_ops_--;
+
+                if (should_disconnect())
+                {
+                    on_disconnect_();
+                    return;
+                }
+
+                // Add to our responses and try to write.
+                responses_.push_back(response_packet);
+
+                if (!flood_)
+                {
+                    do_write_response();
+                }
+            });
+    });
 
 }
 
