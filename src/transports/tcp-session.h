@@ -33,13 +33,10 @@ constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 //
 // Assumptions:
 //
-// - The underlying SessionPool MUST NOT destroy the session until it has been safely closed
-// - SessionPool MUST NOT call any other operations after stop() or halt() are called
+// - SessionPool MUST NOT expect writes to occur after calling stop()
 // - SessionPool MUST NOT destroy itself or any references passed until every session has closed
 //      - Sessions are considered closed as soon as they call on_disconnect_
 //      - SessionPool MAY decide to delay destruction after all sessions are closed
-// - Sessions MUST NOT do any work once closed (object may be destroyed)
-// - SessionPool MUST NOT call to write one payload if flood() was already called
 // - Payloads that are shared across session instances are read only
 // - Server packets are handled by an interface passed to the session.
 //

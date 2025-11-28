@@ -29,7 +29,7 @@ TEST(SessionPoolTests, TCPPool)
         server_cntx.run();
     });
 
-    SessionConfig config(4, 12288, true);
+    SessionConfig config(4, 12288, true, false);
 
     std::array<bool, 4> bytes_to_read{0,0,0,1};
 
@@ -114,7 +114,7 @@ TEST(SessionPoolTests, TCPPool)
 TEST(SessionPoolTests, TCPPoolDestruction)
 {
     // Mock Controller
-    SessionConfig config(4, 12288, true);
+    SessionConfig config(4, 12288, true, false);
 
     // Create custom header parsing function.
     WASMMessageHandler handler;
@@ -305,7 +305,7 @@ TEST(SessionPoolTests, MultiplePoolStartup)
 
     asio::steady_timer stop_pool1_timer(cntx, std::chrono::seconds(1));
 
-    SessionConfig config(4, 12288, true);
+    SessionConfig config(4, 12288, true, false);
 
     // First SessionPool using TCPSession objects.
     {

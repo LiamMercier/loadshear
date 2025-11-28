@@ -18,8 +18,6 @@ on_disconnect_(on_disconnect)
 {
 }
 
-// TODO: change writes to atomics to be relaxed inside the strand.
-
 // Always the first function called on the Session if any are called.
 void TCPSession::start(const Endpoints & endpoints)
 {
@@ -250,28 +248,46 @@ void TCPSession::do_write()
         // If flooding or writes are queued, write payloads.
         if (flood_ || writes_queued_ > 0)
         {
-            // TODO: grab the payload from the payload manger.
-            //
-            // TODO: if we find that there are no more payloads, set writing to false and return.
+            // If flood is enabled, we don't turn it off, overflow is meaningless.
+            writes_queued_--;
+
+            // Grab the payload from the payload manger.
+            PreparedPayload payload;
+            bool valid_payload = payload_manager_.fill_payload(next_payload_index_, payload);
+
+            if (!valid_payload)
+            {
+                if (config_.loop_payloads)
+                {
+                    next_payload_index_ = 0;
+                    do_write();
+                    return;
+                }
+
+                // If not looping, stop writing, we are done.
+                writing_ = false;
+                return;
+            }
+
+            // If we get here, we have a valid payload to write.
+            next_payload_index_++;
 
             writing_ = true;
 
-            // asio::async_write(socket_, <BUFFER  HERE>,
-            // asio::bind_executor(strand_,
-            //     [this, <PAYLOAD>](boost::system::error_code ec, size_t){
-            //         if (ec)
-            //         {
-            //             handle_stream_error(ec);
-            //             return;
-            //         }
-            //
-            //         // Call this function again to post another async_write call.
-            //         if (live_)
-            //         {
-            //             do_flood();
-            //         }
-            //
-            //     }));
+            asio::async_write(socket_, payload.packet_slices,
+            asio::bind_executor(strand_,
+                [self = shared_from_this(),
+                 payload = std::move(payload)](boost::system::error_code ec, size_t){
+                    if (ec)
+                    {
+                        self->handle_stream_error(ec);
+                        return;
+                    }
+
+                    // Call this function again to post another async_write call.
+                    self->do_write();
+
+                }));
         }
         else
         {

@@ -10,7 +10,7 @@ public:
     // Compute any runtime changes to packets and return the data to caller.
     //
     // Returns false if no payload exists.
-    bool fill_payload(size_t index, PreparedPayload & payload);
+    bool fill_payload(size_t index, PreparedPayload & payload) const;
 
 private:
     std::vector<PayloadDescriptor> payloads_;
