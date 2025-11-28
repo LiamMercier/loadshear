@@ -3,12 +3,17 @@
 #include <type_traits>
 #include <cstddef>
 #include <vector>
+#include <functional>
+#include <memory>
+#include <atomic>
+
 #include <boost/asio.hpp>
 
 #include "session-config.h"
 
 namespace asio = boost::asio;
 
+// TODO: make this class lifetime safe
 template<typename Session>
 class SessionPool
 {
@@ -22,9 +27,9 @@ class SessionPool
                                       Session &>,
                   "Session is missing stop()");
 
-    static_assert(std::is_invocable_v<decltype(&Session::halt),
+    static_assert(std::is_invocable_v<decltype(&Session::flood),
                                       Session &>,
-                  "Session is missing halt()");
+                  "Session is missing flood()");
 
 public:
     using NotifyClosed = std::function<void()>;
@@ -43,59 +48,49 @@ public:
     SessionPool(const SessionPool &) = delete;
     SessionPool & operator=(const SessionPool &) = delete;
     SessionPool(SessionPool &&) = delete;
-    SessionPool & operator=(const SessionPool &&) = delete;
-
-    // This should never be called before spinning down each session.
-    ~SessionPool()
-    {
-        // Destroy each session.
-        for (size_t i = 0; i < pool_size_; i++)
-        {
-            sessions_[i].~Session();
-        }
-
-        ::operator delete(sessions_);
-    }
+    SessionPool & operator=(SessionPool &&) = delete;
 
     template<typename... Args>
-    void create_sessions(size_t session_count, Args&&... args)
+    bool create_sessions(size_t session_count, Args&&... args)
     {
         // Prevent creating a new pool if one is in use.
-        if (sessions_)
+        if (!sessions_.empty())
         {
-            throw std::runtime_error("SessionPool called create_sessions twice! "
-                                     "This is not supported!");
+            return false;
         }
 
-        pool_size_ = session_count;
-
-        // Try to allocate on the heap for session_count session objects.
-        sessions_ = static_cast<Session*>(::operator new(sizeof(Session) * pool_size_));
+        // Create session_count new Session objects.
+        sessions_.reserve(session_count);
 
         on_done_callback_ = [this](){ disconnect_callback(); };
 
-        for (size_t i = 0; i < pool_size_; i++)
+        for (size_t i = 0; i < session_count; i++)
         {
-            new (&sessions_[i]) Session(std::forward<Args>(args)..., on_done_callback_);
+            sessions_.emplace_back(
+                std::make_shared<Session>(std::forward<Args>(args)...,
+                                          on_done_callback_)
+            );
         }
+
+        return true;
 
     }
 
     void start_all_sessions(const Session::Endpoints & endpoints)
     {
-        for (size_t i = 0; i < pool_size_; i++)
+        for (size_t i = 0; i < sessions_.size(); i++)
         {
-            sessions_[i].start(endpoints);
+            sessions_[i]->start(endpoints);
         }
 
-        active_sessions_ = pool_size_;
+        active_sessions_ = sessions_.size();
     }
 
     void stop_all_sessions()
     {
-        for (size_t i = 0; i < pool_size_; i++)
+        for (size_t i = 0; i < sessions_.size(); i++)
         {
-            sessions_[i].stop();
+            sessions_[i]->stop();
         }
     }
 
@@ -118,6 +113,7 @@ private:
             bool expected = false;
             if(closed_.compare_exchange_strong(expected, true))
             {
+                // TODO: post callback to controlling class.
                 notify_closed_();
             }
 
@@ -143,11 +139,12 @@ private:
     SessionConfig config_;
     Session::DisconnectCallback on_done_callback_;
 
-    // std::vector does not allow us to store classes that are not movable and not copyable.
+    // TODO <optimization>: We are allocating the pointers contiguously, but not Session memory.
+    //                      In theory, we should be able to allocate the Session objects and
+    //                      then point to this, but we likely need a custom shared_ptr type.
     //
-    // We must carefully manage raw memory to get a contiguous layout of Sessions.
-    size_t pool_size_{0};
-    Session* sessions_{nullptr};
+    //                      This shouldn't be an intrusive re-write if we need to do it later.
+    std::vector<std::shared_ptr<Session>> sessions_;
 
     // Count the number of active sessions.
     std::atomic<size_t> active_sessions_{0};

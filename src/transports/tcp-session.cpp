@@ -18,36 +18,29 @@ on_disconnect_(on_disconnect)
 {
 }
 
+// TODO: change writes to atomics to be relaxed inside the strand.
+
+// Always the first function called on the Session if any are called.
 void TCPSession::start(const Endpoints & endpoints)
 {
-    asio::post(strand_, [this, endpoints]{
-        connecting_ = true;
-        live_ = true;
-        pending_ops_++;
+    asio::post(strand_, [self = shared_from_this(), endpoints]{
+        self->live_ = true;
+        self->connecting_ = true;
 
-        asio::async_connect(socket_, endpoints,
-            asio::bind_executor(strand_,
-                [this](boost::system::error_code ec,
+        asio::async_connect(self->socket_, endpoints,
+            asio::bind_executor(self->strand_,
+                [self](boost::system::error_code ec,
                     tcp::endpoint ep){
-
-                pending_ops_--;
-                connecting_ = false;
-
-                // Check if we need to exit now.
-                if(should_disconnect())
-                {
-                    on_disconnect_();
-                    return;
-                }
+                self->connecting_ = false;
 
                 // If we failed to connect, stop.
                 if (ec)
                 {
-                    this->close_session();
+                    self->close_session();
                     return;
                 }
 
-                this->on_connect();
+                self->on_connect();
             }));
     });
 }
@@ -55,24 +48,45 @@ void TCPSession::start(const Endpoints & endpoints)
 // Request enabling flood.
 void TCPSession::flood()
 {
-    asio::post(strand_, [this]{
-        // TODO: do_flood();
+    asio::post(strand_, [self = shared_from_this()]{
+
+        // If we are already flooding, don't try to open two flood loops.
+        //
+        // See the discussion above do_flood() for why.
+        if (self->flood_)
+        {
+            return;
+        }
+
+        self->flood_ = true;
+
+        // If safe to start write, go ahead
+        if (self->live_ && !self->connecting_)
+        {
+            self->try_start_write();
+        }
+
+    });
+}
+
+// Enqueue N payloads to be sent, if they exist.
+void TCPSession::send(size_t N)
+{
+    asio::post(strand_, [self = shared_from_this(), N]{
+        self->writes_queued_ += N;
+
+        if (self->live_ && !self->connecting_)
+        {
+            self->try_start_write();
+        }
     });
 }
 
 // Stop the session and callback to the orchestrator
 void TCPSession::stop()
 {
-    asio::post(strand_, [this]{
-        this->close_session();
-    });
-}
-
-// Forcefully stop, ignoring all data to be sent.
-void TCPSession::halt()
-{
-    asio::dispatch(strand_, [this]{
-        this->close_session();
+    asio::post(strand_, [self = shared_from_this()]{
+        self->close_session();
     });
 }
 
@@ -84,52 +98,53 @@ void TCPSession::on_connect()
     {
         do_read_header();
     }
+
+    if (writing_)
+    {
+        return;
+    }
+
+    if (flood_ || writes_queued_ > 0)
+    {
+        do_write();
+    }
 }
 
 // do_read_header runs inside of a strand
 void TCPSession::do_read_header()
 {
-    pending_ops_++;
-
     asio::async_read(socket_,
         asio::buffer(incoming_header_, config_.header_size),
         asio::bind_executor(strand_,
-            [this](boost::system::error_code ec, std::size_t){
-                pending_ops_--;
-                if(should_disconnect())
-                {
-                    on_disconnect_();
-                    return;
-                }
-
+            [self = shared_from_this()](boost::system::error_code ec, std::size_t){
                 if (ec)
                 {
-                    this->handle_stream_error(ec);
+                    self->handle_stream_error(ec);
                     return;
                 }
 
                 // User defined message parsing to get message size
-                std::span<const uint8_t> header_bytes(incoming_header_);
-                HeaderResult result = message_handler_.parse_header(header_bytes);
+                std::span<const uint8_t> header_bytes(self->incoming_header_);
+                HeaderResult result = self->message_handler_.parse_header(header_bytes);
 
                 // Handle errors, should only occur if we have a WASM call.
                 if (result.status != HeaderResult::Status::OK)
                 {
-                    next_payload_size_ = 0;
-                    this->do_read_header();
+                    self->next_payload_size_ = 0;
+                    self->do_read_header();
                     return;
                 }
 
-                next_payload_size_ = result.length;
+                self->next_payload_size_ = result.length;
 
                 // Handle the server sending messages that are too big.
-                if (next_payload_size_ > config_.payload_size_limit)
+                if (self->next_payload_size_ > self->config_.payload_size_limit)
                 {
-                    this->handle_stream_error(ec);
+                    self->handle_stream_error(ec);
                     return;
                 }
 
-                this->do_read_body();
+                self->do_read_body();
         }));
 }
 
@@ -146,113 +161,133 @@ void TCPSession::do_read_body()
         body_buffer_ptr_ = body_buffer_.data();
     }
 
-    pending_ops_++;
-
     asio::async_read(socket_,
         asio::buffer(body_buffer_ptr_, next_payload_size_),
         asio::bind_executor(strand_,
-            [this](boost::system::error_code ec, size_t){
-                pending_ops_--;
-                if(should_disconnect())
-                {
-                    on_disconnect_();
-                    return;
-                }
-
+            [self = shared_from_this()](boost::system::error_code ec, size_t){
                 if (ec)
                 {
-                    this->handle_stream_error(ec);
+                    self->handle_stream_error(ec);
                     return;
                 }
 
-                this->handle_message();
-            }));
-}
-
-// Write a response back to the server.
-//
-// This function runs in a strand.
-void TCPSession::do_write_response()
-{
-    pending_ops_++;
-
-    // Grab the next packet to write.
-    ResponsePacket packet = responses_.front();
-    responses_.pop_front();
-
-    asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
-        asio::bind_executor(strand_,
-            [this](boost::system::error_code ec, size_t s)
-            {
-                pending_ops_--;
-                if (should_disconnect())
-                {
-                    on_disconnect_();
-                    return;
-                }
-
-                if (ec)
-                {
-                    handle_stream_error(ec);
-                    return;
-                }
-
-                // Post another write if more responses exist.
-                //
-                // Our message adding callback doesn't need to check
-                // since it is on the strand and adds a message.
-                if (!responses_.empty())
-                {
-                    pending_ops_++;
-                    asio::post(strand_,
-                        [this]() {
-                            pending_ops_--;
-
-                            if (should_disconnect())
-                            {
-                                on_disconnect_();
-                                return;
-                            }
-                            do_write_response();
-                    });
-                }
-
+                self->handle_message();
             }));
 }
 
 // Handles a server packet based on user set rules.
 void TCPSession::handle_message()
 {
-    pending_ops_++;
-
     message_handler_.parse_body_async(
         std::span<const uint8_t>(body_buffer_ptr_, body_buffer_ptr_ + next_payload_size_),
-        [this](ResponsePacket response_packet) {
-            asio::post(strand_, [this, response_packet]() {
-                pending_ops_--;
+        [self = shared_from_this()](ResponsePacket response_packet) {
 
-                if (should_disconnect())
-                {
-                    on_disconnect_();
-                    return;
-                }
-
+            asio::post(self->strand_, [self, response_packet]() {
                 // Add to our responses and try to write.
-                responses_.push_back(response_packet);
+                self->responses_.push_back(response_packet);
 
-                if (!flood_)
-                {
-                    do_write_response();
-                }
+                self->try_start_write();
             });
+
     });
 
+}
+
+// Called from a strand.
+void TCPSession::try_start_write()
+{
+    // Clearly we can't start another loop.
+    if (writing_)
+    {
+        return;
+    }
+
+    // If we have a response to deliver or payloads.
+    if (flood_ || writes_queued_ > 0 || responses_.size() > 0)
+    {
+        do_write();
+    }
+}
+
+// There should only be one outstanding write per socket to maximize throughput. Why?
+// - Having N async_write operations at once just increases backpressure on the socket
+// - Filling the socket with data too fast will eventually consume userspace memory
+// - We would not be writing to N different sockets, just N times to a single socket
+// - Posting (N * num_sessions) different async_writes will often overwhelm the thread pool
+// - We may interleave writes to the socket creating garbage data
+//
+// Why not coalese the entire queue of payloads to write everything once then?
+// - The payloads might exceed SO_SNDBUF and so we again consume extra userspace memory
+// - If we wanted to simulate sending a maximally coalesced payload, we can supply a custom packet.
+void TCPSession::do_write()
+{
+    // Send responses first, then payloads.
+    if (responses_.size() > 0)
+    {
+        ResponsePacket packet = responses_.front();
+        responses_.pop_front();
+
+        writing_ = true;
+
+        asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
+            asio::bind_executor(strand_,
+                [self = shared_from_this(), packet](boost::system::error_code ec, size_t){
+                    if (ec)
+                    {
+                        self->handle_stream_error(ec);
+                        return;
+                    }
+
+                    // Call this function again to post another async_write call.
+                    self->do_write();
+
+                }));
+
+        return;
+    }
+    else
+    {
+        // If flooding or writes are queued, write payloads.
+        if (flood_ || writes_queued_ > 0)
+        {
+            // TODO: grab the payload from the payload manger.
+            //
+            // TODO: if we find that there are no more payloads, set writing to false and return.
+
+            writing_ = true;
+
+            // asio::async_write(socket_, <BUFFER  HERE>,
+            // asio::bind_executor(strand_,
+            //     [this, <PAYLOAD>](boost::system::error_code ec, size_t){
+            //         if (ec)
+            //         {
+            //             handle_stream_error(ec);
+            //             return;
+            //         }
+            //
+            //         // Call this function again to post another async_write call.
+            //         if (live_)
+            //         {
+            //             do_flood();
+            //         }
+            //
+            //     }));
+        }
+        else
+        {
+            // We stopped writing, set to false.
+            writing_ = false;
+        }
+
+        return;
+    }
 }
 
 // close_session runs in a strand
 void TCPSession::close_session()
 {
-    if (!live_ && !connecting_)
+    // Prevent calling twice.
+    if (!live_)
     {
         return;
     }
@@ -263,13 +298,7 @@ void TCPSession::close_session()
 
     live_ = false;
 
-    // Call on_disconnect_ once every other handler has run.
-    //
-    // This assumes that the pool SHALL NOT call any other functions after.
-    if (pending_ops_ == 0)
-    {
-        on_disconnect_();
-    }
+    on_disconnect_();
 }
 
 void TCPSession::handle_stream_error(boost::system::error_code ec)

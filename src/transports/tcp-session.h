@@ -39,10 +39,11 @@ constexpr size_t MESSAGE_BUFFER_SIZE = 4 * 1024;
 //      - Sessions are considered closed as soon as they call on_disconnect_
 //      - SessionPool MAY decide to delay destruction after all sessions are closed
 // - Sessions MUST NOT do any work once closed (object may be destroyed)
+// - SessionPool MUST NOT call to write one payload if flood() was already called
 // - Payloads that are shared across session instances are read only
 // - Server packets are handled by an interface passed to the session.
 //
-class TCPSession
+class TCPSession : public std::enable_shared_from_this<TCPSession>
 {
 public:
     using tcp = asio::ip::tcp;
@@ -60,16 +61,16 @@ public:
     // This class should not be moved or copied.
     TCPSession(const TCPSession &) = delete;
     TCPSession & operator=(const TCPSession &) = delete;
-    TCPSession(const TCPSession &&) = delete;
-    TCPSession & operator=(const TCPSession &&) = delete;
+    TCPSession(TCPSession &&) = delete;
+    TCPSession & operator=(TCPSession &&) = delete;
 
     void start(const Endpoints & endpoints);
 
     void flood();
 
-    void stop();
+    void send(size_t N);
 
-    void halt();
+    void stop();
 
 private:
     void on_connect();
@@ -78,15 +79,15 @@ private:
 
     void do_read_body();
 
-    void do_write_response();
-
     void handle_message();
+
+    void try_start_write();
+
+    void do_write();
 
     void close_session();
 
     void handle_stream_error(boost::system::error_code ec);
-
-    inline bool should_disconnect();
 
 public:
 
@@ -100,7 +101,9 @@ private:
     bool live_{false};
     bool connecting_{false};
     bool flood_{false};
-    size_t pending_ops_{0};
+
+    // Ensures we don't have two writers for non-flooding scenario
+    bool writing_{false};
 
     //
     // Packet management.
@@ -125,6 +128,12 @@ private:
 
     std::deque<ResponsePacket> responses_;
 
+    // Increasing index into the payloads that need to be sent by this session
+    size_t next_payload_index_{0};
+
+    // Keep track of how many payload writes are requested if not flooding.
+    size_t writes_queued_{0};
+
     //
     // Handlers
     //
@@ -138,8 +147,3 @@ private:
     //
     const DisconnectCallback & on_disconnect_;
 };
-
-inline bool TCPSession::should_disconnect()
-{
-    return (!live_ && pending_ops_ == 0);
-}
