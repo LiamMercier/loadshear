@@ -23,13 +23,18 @@ class SessionPool
                                       const typename Session::Endpoints &>,
                   "Session is missing start()");
 
-    static_assert(std::is_invocable_v<decltype(&Session::stop),
-                                      Session &>,
-                  "Session is missing stop()");
-
     static_assert(std::is_invocable_v<decltype(&Session::flood),
                                       Session &>,
                   "Session is missing flood()");
+
+    static_assert(std::is_invocable_v<decltype(&Session::send),
+                                      Session &,
+                                      size_t>,
+                  "Session is missing flood()");
+
+    static_assert(std::is_invocable_v<decltype(&Session::stop),
+                                      Session &>,
+                  "Session is missing stop()");
 
 public:
     using NotifyClosed = std::function<void()>;
