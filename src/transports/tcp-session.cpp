@@ -185,6 +185,8 @@ void TCPSession::handle_message()
                 self->responses_.push_back(response_packet);
 
                 self->try_start_write();
+
+                self->do_read_header();
             });
 
     });
