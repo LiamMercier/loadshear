@@ -6,7 +6,7 @@ WASMMessageHandler::WASMMessageHandler(std::shared_ptr<wasmtime::Engine> engine,
                                        std::shared_ptr<wasmtime::Module> module)
 :engine_(std::move(engine)),
 module_(std::move(module)),
-store_(*engine)
+store_(*engine_)
 {
     auto tmp_instance = wasmtime::Instance::create(store_, *module_, {});
 

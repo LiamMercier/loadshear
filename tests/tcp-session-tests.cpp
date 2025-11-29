@@ -3,13 +3,42 @@
 #include <iostream>
 #include <thread>
 #include <memory>
+#include <filesystem>
+#include <fstream>
 
 #include "wasm-message-handler.h"
 #include "tcp-session.h"
 
 #include "tcp-broadcast-server.h"
 
-TEST(TCPSessionTests, MessageHandling)
+static std::vector<uint8_t> read_wasm_file(const std::string & path)
+{
+    std::ifstream file(path, std::ios::binary);
+
+    if (!file)
+    {
+        throw std::runtime_error("File " + path + " does not exist\n");
+    }
+
+    std::error_code ec;
+    size_t filesize = static_cast<size_t>(std::filesystem::file_size(path));
+
+    if (ec)
+    {
+        throw std::runtime_error("Call file_size for " + path + " failed\n");
+    }
+
+    std::vector<uint8_t> buffer(filesize);
+
+    if (!file.read(reinterpret_cast<char *>(buffer.data()), filesize))
+    {
+        throw std::runtime_error("File " + path + " read failed\n");
+    }
+
+    return buffer;
+}
+
+TEST(TCPSessionTests, WASMMessageHandling)
 {
     // Setup basic server.
     asio::io_context server_cntx;
@@ -34,16 +63,35 @@ TEST(TCPSessionTests, MessageHandling)
     wasmtime::Config WASM_config;
     auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
 
-    auto module_tmp = std::make_shared<wasmtime::Module>(
-        wasmtime::Module::compile(*engine, "modules/tcp-session-parsing.wat")
-    );
+    std::vector<uint8_t> wasm_bytes;
+
+    try {
+        wasm_bytes = read_wasm_file("tests/modules/tcp-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        ASSERT_TRUE(false);
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
 
     if (!module_tmp)
     {
-        ASSE
+        session_cntx.stop();
+
+        server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        ASSERT_TRUE(module_tmp);
     }
 
-    auto module = module_tmp.unwrap()
+    // But, isn't this no longer shared_ptr<wasmtime::Module> since it's wrapped?
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
     
     WASMMessageHandler handler(engine, module);
 
