@@ -1,5 +1,30 @@
 #include "wasm-message-handler.h"
 
+#include <utility>
+
+WASMMessageHandler::WASMMessageHandler(std::shared_ptr<wasmtime::Engine> engine,
+                                       std::shared_ptr<wasmtime::Module> module)
+:engine_(std::move(engine)),
+module_(std::move(module)),
+store_(*engine)
+{
+    auto tmp_instance = wasmtime::Instance::create(store_, *module_, {});
+
+    if (!tmp_instance)
+    {
+        // We cannot proceed with execution, the program must end and caller must deal with the error.
+        throw std::runtime_error("WASM instance could not be created! Aborting!");
+    }
+
+    instance_ = std::move(tmp_instance.unwrap());
+
+    // memory_ = instance_.get_export(store_, "memory").as<wasmtime::Memory>();
+
+    // handle_body_ = instance_.get_export(store_, "handle_request").as<wasmtime::Func>();
+}
+
+// TODO: explain why we are not doing the WASM call async (the function is assumed low runtime, wasmtime is embedded, etc).
+
 // TODO: Call WASM, and copy the entire result out so the call is stateless.
 void WASMMessageHandler::parse_body_async(std::span<const uint8_t> buffer,
                                           std::function<void(ResponsePacket)> callback) const
@@ -36,6 +61,7 @@ HeaderResult WASMMessageHandler::parse_header(std::span<const uint8_t> buffer) c
 
         // TODO: WASM setup
         return parse_header_func(buffer);
+        //return {0, 0};
     }
 }
 

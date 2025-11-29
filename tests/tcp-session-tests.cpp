@@ -30,8 +30,22 @@ TEST(TCPSessionTests, MessageHandling)
 
     SessionConfig config(4, 12288, true, false);
 
-    // Create mock header parsing function.
-    WASMMessageHandler handler;
+    // Create mock header parsing function and WASM instance.
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
+
+    auto module_tmp = std::make_shared<wasmtime::Module>(
+        wasmtime::Module::compile(*engine, "modules/tcp-session-parsing.wat")
+    );
+
+    if (!module_tmp)
+    {
+        ASSE
+    }
+
+    auto module = module_tmp.unwrap()
+    
+    WASMMessageHandler handler(engine, module);
 
     std::array<bool, 4> bytes_to_read{0,0,0,1};
     handler.set_header_parser([bytes_to_read](std::span<const uint8_t> buffer) -> HeaderResult
