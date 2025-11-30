@@ -40,10 +40,14 @@ private:
     std::shared_ptr<wasmtime::Module> module_;
 
     std::optional<wasmtime::Memory> memory_;
+
+    // Functions we expect to exist
+    std::optional<wasmtime::Func> alloc_;
+    std::optional<wasmtime::Func> dealloc_;
     std::optional<wasmtime::Func> handle_body_;
     // TODO: handle_header_
 
     // These cannot be shared across threads, so we must have a MessageHandler per thread.
-    wasmtime::Store store_;
+    mutable wasmtime::Store store_;
     std::optional<wasmtime::Instance> instance_;
 };

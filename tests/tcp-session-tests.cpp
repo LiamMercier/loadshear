@@ -38,7 +38,7 @@ static std::vector<uint8_t> read_wasm_file(const std::string & path)
     return buffer;
 }
 
-TEST(TCPSessionTests, WASMMessageHandling)
+TEST(TCPSessionTests, SingleSessionParsing)
 {
     // Setup basic server.
     asio::io_context server_cntx;
@@ -66,12 +66,12 @@ TEST(TCPSessionTests, WASMMessageHandling)
     std::vector<uint8_t> wasm_bytes;
 
     try {
-        wasm_bytes = read_wasm_file("tests/modules/tcp-session-parsing.wasm");
+        wasm_bytes = read_wasm_file("tests/modules/tcp-single-session-parsing.wasm");
     }
     catch (const std::exception & error)
     {
         std::cerr << error.what() << "\n";
-        ASSERT_TRUE(false);
+        FAIL();
     }
 
     auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
@@ -87,33 +87,26 @@ TEST(TCPSessionTests, WASMMessageHandling)
             server_thread.join();
         }
 
-        ASSERT_TRUE(module_tmp);
+        FAIL();
     }
 
-    // But, isn't this no longer shared_ptr<wasmtime::Module> since it's wrapped?
     auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
     
-    WASMMessageHandler handler(engine, module);
-
-    std::array<bool, 4> bytes_to_read{0,0,0,1};
-    handler.set_header_parser([bytes_to_read](std::span<const uint8_t> buffer) -> HeaderResult
+    try {
+        WASMMessageHandler test_handler_construct(engine, module);
+    }
+    catch (const std::exception & error)
     {
-        size_t size = 0;
-
-        for (size_t i = 0; i < bytes_to_read.size(); i++)
-        {
-            if (bytes_to_read[i])
-            {
-                size <<= 8;
-                size |= buffer[i];
-            }
-        }
-
-        return {size, HeaderResult::Status::OK};
-    });
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
 
     // Empty payload manager.
     PayloadManager payload_manager;
+
+    // WASMMessageHandler handler(engine, module);
+    std::shared_ptr<WASMMessageHandler> handler_ptr;
+    std::shared_ptr<TCPSession> session_ptr;
 
     // Empty callback that just prints and stops the context.
     TCPSession::DisconnectCallback cb = [&](){
@@ -121,29 +114,59 @@ TEST(TCPSessionTests, WASMMessageHandling)
         session_cntx.stop();
     };
 
-    // Create the TCPSession instance.
-    auto session = make_shared<TCPSession>(session_cntx,
-                                           config,
-                                           handler,
-                                           payload_manager,
-                                           cb);
+    asio::post(session_cntx, [&](){
+        try {
+            handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
+        }
+        catch (const std::exception & error)
+        {
+            std::cerr << error.what() << "\n";
+            session_cntx.stop();
+            return;
+        }
 
-    // Connection endpoint.
-    const TCPSession::Endpoints endpoints{
-            TCPSession::tcp::endpoint(
-                asio::ip::make_address("127.0.0.1"),
-                12345
-            )};
+        std::array<bool, 4> bytes_to_read{0,0,0,1};
+        handler_ptr->set_header_parser([bytes_to_read](std::span<const uint8_t> buffer) -> HeaderResult
+        {
+            size_t size = 0;
 
-    // Call to connect.
-    session->start(endpoints);
+            for (size_t i = 0; i < bytes_to_read.size(); i++)
+            {
+                if (bytes_to_read[i])
+                {
+                    size <<= 8;
+                    size |= buffer[i];
+                }
+            }
+
+            return {size, HeaderResult::Status::OK};
+        });
+
+        // Create the TCPSession instance.
+        session_ptr = make_shared<TCPSession>(session_cntx,
+                                              config,
+                                              *handler_ptr,
+                                              payload_manager,
+                                              cb);
+
+        // Connection endpoint.
+        const TCPSession::Endpoints endpoints{
+                TCPSession::tcp::endpoint(
+                    asio::ip::make_address("127.0.0.1"),
+                    12345
+                )};
+
+        // Call to connect.
+        session_ptr->start(endpoints);
+
+    });
 
     // Turn this test off after 500ms of responding.
     asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
-        session->stop();
+        session_ptr->stop();
     });
 
     session_cntx.run();
@@ -169,3 +192,5 @@ TEST(TCPSessionTests, WASMMessageHandling)
 
     SUCCEED();
 }
+
+
