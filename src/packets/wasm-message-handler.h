@@ -18,8 +18,11 @@ public:
                        std::shared_ptr<wasmtime::Module> module);
 
     // Input buffer + callback.
-    void parse_body_async(std::span<const uint8_t> buffer,
-                          std::function<void(ResponsePacket)> callback) const override;
+    //
+    // The header and the body are given to the user's WASM script.'
+    void parse_message(std::span<const uint8_t> header,
+                       std::span<const uint8_t> body,
+                       std::function<void(ResponsePacket)> callback) const override;
 
     HeaderResult parse_header(std::span<const uint8_t> buffer) const override;
 

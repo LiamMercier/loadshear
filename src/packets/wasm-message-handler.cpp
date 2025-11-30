@@ -99,12 +99,11 @@ store_(*engine_)
     handle_body_ = std::move(*body_ptr);
 }
 
-// TODO: consider safety improvements, modify contract a bit if needed.
-
 // We synchronously call the WASM code (runtime is embedded, low overhead). We assume that
 // the user functions will not be computationally prohibitive.
-void WASMMessageHandler::parse_body_async(std::span<const uint8_t> buffer,
-                                          std::function<void(ResponsePacket)> callback) const
+void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
+                                       std::span<const uint8_t> body,
+                                       std::function<void(ResponsePacket)> callback) const
 {
     // Annotated with the required Host <-> Guest API contract.
     //
@@ -112,35 +111,56 @@ void WASMMessageHandler::parse_body_async(std::span<const uint8_t> buffer,
     try
     {
         // (CONTRACT 2): Allocate in the user's module.
-        int32_t input_length = static_cast<int32_t>(buffer.size());
 
-        auto alloc_res = alloc_->call(store_, {input_length}).unwrap();
+        // Compute length. This is assumed to not overflow, any packet this large is unreasonable.
+        uint32_t input_length = static_cast<uint32_t>(header.size() + body.size());
 
-        int32_t input_ptr = alloc_res[0].i32();
+        auto alloc_res = alloc_->call(store_, {static_cast<int32_t>(input_length)}).unwrap();
 
-        // Bad allocation.
-        //
-        // TODO: document this in contract explanation/file. (bad alloc -> ptr is zero)
-        if (input_ptr == 0 && input_size != 0)
+        uint32_t input_ptr = alloc_res[0].i32();
+
+        // Bad allocation if pointer is zero.
+        if (input_ptr == 0 && input_length != 0)
         {
-            std::cout << "Bad allocation\n";
+            // TODO: log with a log level? Also, remove \n if we do.
+            std::cout << "Bad allocation detected\n";
             callback({ std::make_shared<std::vector<uint8_t>>() });
             return;
         }
 
         // (CONTRACT 3): Copy data from Host to Guest
-        uint8_t *guest_memory = memory_->data(store_).data();
+        auto mem_view = memory_->data(store_);
+        uint8_t *guest_memory = mem_view.data();
 
-        std::memcpy(guest_memory + input_ptr, buffer.data(), buffer.size());
+        // Try to prevent OOB memory access.
+        if (static_cast<uint64_t>(input_ptr) + static_cast<uint64_t>(input_length)
+            > mem_view.size())
+        {
+            // TODO: log?
+            std::cout << "OOB behavior detected during response buffer read. "
+                      << "Your WASM script violates the contract.\n";
+            callback({ std::make_shared<std::vector<uint8_t>>() });
+            return;
+        }
+
+        std::memcpy(guest_memory + input_ptr,
+                    header.data(),
+                    header.size());
+
+        std::memcpy(guest_memory + input_ptr + header.size(),
+                    body.data(),
+                    body.size());
 
         // (CONTRACT 4): Host calls the required handler from Guest.
-        auto body_res = handle_body_->call(store_, {input_ptr, input_length}).unwrap();
+        auto body_res = handle_body_->call(store_,
+                                           {static_cast<int32_t>(input_ptr),
+                                            static_cast<int32_t>(input_length)}).unwrap();
 
-        int64_t packed = body_res[0].i64();
+        uint64_t packed = body_res[0].i64();
 
         // (CONTRACT 5): Host interprets lower 32 bits as the pointer, upper 32 as size.
-        int32_t out_ptr = static_cast<uint32_t>(packed & 0xffffffu);
-        int32_t out_length = static_cast<uint32_t>((packed >> 32) & 0xffffffffu);
+        uint32_t out_ptr = static_cast<uint32_t>(packed & 0xffffffffu);
+        uint32_t out_length = static_cast<uint32_t>((packed >> 32) & 0xffffffffu);
 
         // (CONTRACT 6): Copy data from Guest to Host.
         auto vec = std::make_shared<std::vector<uint8_t>>();
@@ -148,26 +168,37 @@ void WASMMessageHandler::parse_body_async(std::span<const uint8_t> buffer,
         if (out_length > 0)
         {
             // Handle guests changing their memory layout.
+            mem_view = memory_->data(store_);
             guest_memory = memory_->data(store_).data();
-            out_ptr = guest_memory + out_ptr;
+
+            // Try to prevent OOB memory access.
+            if (static_cast<uint64_t>(out_ptr) + static_cast<uint64_t>(out_length)
+                > mem_view.size())
+            {
+                // TODO: log?
+                std::cout << "OOB behavior detected during response buffer read. "
+                          << "Your WASM script violates the contract.\n";
+                callback({ std::make_shared<std::vector<uint8_t>>() });
+                return;
+            }
 
             // Copy data out of guest.
             vec->resize(out_length);
             std::memcpy(vec->data(), guest_memory + out_ptr, out_length);
 
-            // Call dealloc
-            dealloc_->call(store_, {out_ptr, out_length});
-        }
-
         // (CONTRACT 7): Host calls deallocate for Guest.
 
-        // Grab memory pointer if anything changed.
-        guest_memory = memory_->data(store_).data();
+            // Call dealloc on output buffer.
+            dealloc_->call(store_,
+                           {static_cast<int32_t>(out_ptr),
+                            static_cast<int32_t>(out_length)}).unwrap();
+        }
 
-        // Deallocate.
-        dealloc_->call(store_, {input_ptr, input_length}).unwrap();
+        // Call dealloc on input buffer.
+        dealloc_->call(store_,
+                       {static_cast<int32_t>(input_ptr),
+                        static_cast<int32_t>(input_length)}).unwrap();
 
-        // We assume that the Guest will deal with its own allocated buffer.
         callback({std::move(vec)});
         return;
     }

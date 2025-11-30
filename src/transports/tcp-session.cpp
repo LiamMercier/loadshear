@@ -176,7 +176,9 @@ void TCPSession::do_read_body()
 // Handles a server packet based on user set rules.
 void TCPSession::handle_message()
 {
-    message_handler_.parse_body_async(
+    // Give the message handler the header and body of the message.
+    message_handler_.parse_message(
+        std::span<const uint8_t>(incoming_header_.data(), incoming_header_.size()),
         std::span<const uint8_t>(body_buffer_ptr_, body_buffer_ptr_ + next_payload_size_),
         [self = shared_from_this()](ResponsePacket response_packet) {
 

@@ -186,8 +186,8 @@ TEST(TCPSessionTests, SingleSessionParsing)
                                                << "requests!";
 
     // The server sends 8 bytes at a time, we read 4 as the header and 4 as the payload
-    // of which we should send back 4 bytes.
-    EXPECT_EQ(server.lifetime_sent_ / 2,
+    // of which we send an equal amount of bytes 0x55 back.
+    EXPECT_EQ(server.lifetime_sent_,
               server.lifetime_received_) << "Server was not responded to properly!";
 
     SUCCEED();

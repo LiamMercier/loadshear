@@ -6,8 +6,9 @@
 struct MessageHandler
 {
 public:
-    virtual void parse_body_async(std::span<const uint8_t> buffer,
-                                  std::function<void(ResponsePacket)> callback) const = 0;
+    virtual void parse_message(std::span<const uint8_t> header,
+                               std::span<const uint8_t> body,
+                               std::function<void(ResponsePacket)> callback) const = 0;
 
     virtual HeaderResult parse_header(std::span<const uint8_t> buffer) const = 0;
 
