@@ -12,11 +12,13 @@ public:
 
     TCPBroadcastServer(asio::io_context & cntx,
                        tcp::endpoint endpoint,
-                       uint64_t broadcast_interval_ms)
+                       uint64_t broadcast_interval_ms,
+                       std::vector<uint8_t> bytes)
     :cntx_(cntx),
     acceptor_(cntx, endpoint),
     timer_(cntx),
-    broadcast_interval_ms_(broadcast_interval_ms)
+    broadcast_interval_ms_(broadcast_interval_ms),
+    send_bytes_(bytes)
     {
     }
 
@@ -98,15 +100,13 @@ private:
 
     void broadcast_heartbeat()
     {
-        static const uint8_t packet[8] = { 0x1, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0 };
-
         std::lock_guard<std::mutex> lock(clients_mutex_);
 
         for (auto it = clients_.begin(); it != clients_.end(); it++)
         {
             auto session = *it;
 
-            session->write_buffer.assign(packet, packet + 8);
+            session->write_buffer.assign(send_bytes_.begin(), send_bytes_.end());
 
             lifetime_broadcasts_.fetch_add(1);
 
@@ -121,7 +121,7 @@ private:
                         return;
                     }
 
-                    lifetime_sent_.fetch_add(8, std::memory_order_relaxed);
+                    lifetime_sent_.fetch_add(session->write_buffer.size(), std::memory_order_relaxed);
             });
         }
 
@@ -141,4 +141,7 @@ private:
 
     std::mutex clients_mutex_;
     std::unordered_set<std::shared_ptr<BasicSession>> clients_;
+
+    // Buffer to send.
+    std::vector<uint8_t> send_bytes_;
 };

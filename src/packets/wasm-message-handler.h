@@ -14,9 +14,15 @@ public:
 
 // Overrides
 public:
+    WASMMessageHandler(std::shared_ptr<wasmtime::Engine> engine,
+                       std::shared_ptr<wasmtime::Module> module);
+
     // Input buffer + callback.
-    void parse_body_async(std::span<const uint8_t> buffer,
-                          std::function<void(ResponsePacket)> callback) const override;
+    //
+    // The header and the body are given to the user's WASM script.'
+    void parse_message(std::span<const uint8_t> header,
+                       std::span<const uint8_t> body,
+                       std::function<void(ResponsePacket)> callback) const override;
 
     HeaderResult parse_header(std::span<const uint8_t> buffer) const override;
 
@@ -32,15 +38,19 @@ private:
     // WASM related members.
     //
 
-    // Members that cannot be shared across threads.
-    // We want multiple to increase throughput.
-    static thread_local wasmtime::Store store_;
-    static thread_local wasmtime::Instance instance_;
-
     // Engine and module are thread safe
     std::shared_ptr<wasmtime::Engine> engine_;
     std::shared_ptr<wasmtime::Module> module_;
 
     std::optional<wasmtime::Memory> memory_;
-    std::optional<wasmtime::Func> wasm_handle_request_;
+
+    // Functions we expect to exist
+    std::optional<wasmtime::Func> alloc_;
+    std::optional<wasmtime::Func> dealloc_;
+    std::optional<wasmtime::Func> handle_body_;
+    std::optional<wasmtime::Func> handle_header_;
+
+    // These cannot be shared across threads, so we must have a MessageHandler per thread.
+    mutable wasmtime::Store store_;
+    std::optional<wasmtime::Instance> instance_;
 };
