@@ -19,15 +19,15 @@ uint32_t alloc(uint32_t input_size)
     return res;
 }
 
-uint64_t handle_body(uint32_t input_ptr, uint32_t input_size)
+uint64_t handle_body(uint32_t input_index, uint32_t input_size)
 {
-    uint8_t *memory = (uint8_t *)(uintptr_t)input_ptr;
+    uint8_t *memory = (uint8_t *)(uintptr_t)input_index;
     for (uint32_t i = 0; i < input_size; i++)
     {
         memory[i] = 0x55;
     }
 
-    uint32_t out_ptr = input_ptr;
+    uint32_t out_ptr = input_index;
     uint32_t out_length = input_size;
 
     // Combine and send (order is based on the wasm contract).
@@ -37,15 +37,15 @@ uint64_t handle_body(uint32_t input_ptr, uint32_t input_size)
 }
 
 // Move the pointer back to the start, we are free to write over memory.
-void dealloc(uint32_t input_ptr, uint32_t input_size)
+void dealloc(uint32_t input_index, uint32_t input_size)
 {
     heap_top = (uint32_t)(uintptr_t)__heap_base;
 }
 
 // No-op, override by basic header parse settings.
-uint32_t handle_header(uint32_t input_ptr, uint32_t input_size)
+uint32_t handle_header(uint32_t input_index, uint32_t input_size)
 {
-    (void)input_ptr;
+    (void)input_index;
     (void)input_size;
     return 0;
 }

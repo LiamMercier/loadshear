@@ -184,9 +184,12 @@ void TCPSession::handle_message()
 
             asio::post(self->strand_, [self, response_packet]() {
                 // Add to our responses and try to write.
-                self->responses_.push_back(response_packet);
+                if (response_packet.packet->size() > 0)
+                {
+                    self->responses_.push_back(response_packet);
 
-                self->try_start_write();
+                    self->try_start_write();
+                }
 
                 self->do_read_header();
             });

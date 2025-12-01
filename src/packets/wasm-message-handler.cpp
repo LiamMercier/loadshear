@@ -106,7 +106,7 @@ store_(*engine_)
         return;
     }
 
-    auto header_ptr = std::get_if<decltype(handle_header_)::value_type>(&*maybe_body);
+    auto header_ptr = std::get_if<decltype(handle_header_)::value_type>(&*maybe_header);
 
     if (!header_ptr)
     {
@@ -125,14 +125,14 @@ store_(*engine_)
 
             auto alloc_res = alloc_->call(store_, {static_cast<int32_t>(buffer.size())}).unwrap();
 
-            uint32_t input_ptr = alloc_res[0].i32();
+            uint32_t input_index = alloc_res[0].i32();
 
-            if (input_ptr == 0)
+            if (input_index == 0)
             {
                 std::cout << "Bad allocation detected for header\n";
 
                 dealloc_->call(store_,
-                               {static_cast<int32_t>(input_ptr),
+                               {static_cast<int32_t>(input_index),
                                 static_cast<int32_t>(input_length)}).unwrap();
 
                 return {0, HeaderResult::Status::ERROR};
@@ -141,25 +141,25 @@ store_(*engine_)
             auto mem_view = memory_->data(store_);
             uint8_t *guest_memory = mem_view.data();
 
-            if (static_cast<uint64_t>(input_ptr) + static_cast<uint64_t>(input_length)
+            if (static_cast<uint64_t>(input_index) + static_cast<uint64_t>(input_length)
             > mem_view.size())
             {
                 std::cout << "OOB behavior detected during header input buffer write. "
                           << "Your WASM script violates the contract.\n";
 
                 dealloc_->call(store_,
-                               {static_cast<int32_t>(input_ptr),
+                               {static_cast<int32_t>(input_index),
                                 static_cast<int32_t>(input_length)}).unwrap();
 
                 return {0, HeaderResult::Status::ERROR};
             }
 
-            std::memcpy(guest_memory + input_ptr,
+            std::memcpy(guest_memory + input_index,
                         buffer.data(),
                         buffer.size());
 
             auto header_res = handle_header_->call(store_,
-                                                   {static_cast<int32_t>(input_ptr),
+                                                   {static_cast<int32_t>(input_index),
                                                     static_cast<int32_t>(input_length)}).unwrap();
 
             uint32_t size = 0;
@@ -172,7 +172,7 @@ store_(*engine_)
                           << "Your WASM script violates the contract.\n";
 
                 dealloc_->call(store_,
-                               {static_cast<int32_t>(input_ptr),
+                               {static_cast<int32_t>(input_index),
                                 static_cast<int32_t>(input_length)}).unwrap();
 
                 return {size, HeaderResult::Status::ERROR};
@@ -182,7 +182,7 @@ store_(*engine_)
 
             // Call dealloc
             dealloc_->call(store_,
-                           {static_cast<int32_t>(input_ptr),
+                           {static_cast<int32_t>(input_index),
                             static_cast<int32_t>(input_length)}).unwrap();
 
             return {size, HeaderResult::Status::OK};
@@ -214,16 +214,16 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
 
         auto alloc_res = alloc_->call(store_, {static_cast<int32_t>(input_length)}).unwrap();
 
-        uint32_t input_ptr = alloc_res[0].i32();
+        uint32_t input_index = alloc_res[0].i32();
 
-        // Bad allocation if pointer is zero.
-        if (input_ptr == 0 && input_length != 0)
+        // Bad allocation if index is zero.
+        if (input_index == 0 && input_length != 0)
         {
             // TODO: log with a log level? Also, remove \n if we do.
             std::cout << "Bad allocation detected for body\n";
 
             dealloc_->call(store_,
-                           {static_cast<int32_t>(input_ptr),
+                           {static_cast<int32_t>(input_index),
                             static_cast<int32_t>(input_length)}).unwrap();
 
             callback({ std::make_shared<std::vector<uint8_t>>() });
@@ -235,7 +235,7 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
         uint8_t *guest_memory = mem_view.data();
 
         // Try to prevent OOB memory access.
-        if (static_cast<uint64_t>(input_ptr) + static_cast<uint64_t>(input_length)
+        if (static_cast<uint64_t>(input_index) + static_cast<uint64_t>(input_length)
             > mem_view.size())
         {
             // TODO: log?
@@ -243,30 +243,30 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
                       << "Your WASM script violates the contract.\n";
 
             dealloc_->call(store_,
-                           {static_cast<int32_t>(input_ptr),
+                           {static_cast<int32_t>(input_index),
                             static_cast<int32_t>(input_length)}).unwrap();
 
             callback({ std::make_shared<std::vector<uint8_t>>() });
             return;
         }
 
-        std::memcpy(guest_memory + input_ptr,
+        std::memcpy(guest_memory + input_index,
                     header.data(),
                     header.size());
 
-        std::memcpy(guest_memory + input_ptr + header.size(),
+        std::memcpy(guest_memory + input_index + header.size(),
                     body.data(),
                     body.size());
 
         // (CONTRACT 4): Host calls the required handler from Guest.
         auto body_res = handle_body_->call(store_,
-                                           {static_cast<int32_t>(input_ptr),
+                                           {static_cast<int32_t>(input_index),
                                             static_cast<int32_t>(input_length)}).unwrap();
 
         uint64_t packed = body_res[0].i64();
 
-        // (CONTRACT 5): Host interprets lower 32 bits as the pointer, upper 32 as size.
-        uint32_t out_ptr = static_cast<uint32_t>(packed & 0xffffffffu);
+        // (CONTRACT 5): Host interprets lower 32 bits as the index, upper 32 as size.
+        uint32_t out_index = static_cast<uint32_t>(packed & 0xffffffffu);
         uint32_t out_length = static_cast<uint32_t>((packed >> 32) & 0xffffffffu);
 
         // (CONTRACT 6): Copy data from Guest to Host.
@@ -279,7 +279,7 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
             guest_memory = memory_->data(store_).data();
 
             // Try to prevent OOB memory access.
-            if (static_cast<uint64_t>(out_ptr) + static_cast<uint64_t>(out_length)
+            if (static_cast<uint64_t>(out_index) + static_cast<uint64_t>(out_length)
                 > mem_view.size())
             {
                 // TODO: log?
@@ -287,11 +287,11 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
                           << "Your WASM script violates the contract.\n";
 
                 dealloc_->call(store_,
-                               {static_cast<int32_t>(out_ptr),
+                               {static_cast<int32_t>(out_index),
                                 static_cast<int32_t>(out_length)}).unwrap();
 
                 dealloc_->call(store_,
-                               {static_cast<int32_t>(input_ptr),
+                               {static_cast<int32_t>(input_index),
                                 static_cast<int32_t>(input_length)}).unwrap();
 
                 callback({ std::make_shared<std::vector<uint8_t>>() });
@@ -300,19 +300,19 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
 
             // Copy data out of guest.
             vec->resize(out_length);
-            std::memcpy(vec->data(), guest_memory + out_ptr, out_length);
+            std::memcpy(vec->data(), guest_memory + out_index, out_length);
 
         // (CONTRACT 7): Host calls deallocate for Guest.
 
             // Call dealloc on output buffer.
             dealloc_->call(store_,
-                           {static_cast<int32_t>(out_ptr),
+                           {static_cast<int32_t>(out_index),
                             static_cast<int32_t>(out_length)}).unwrap();
         }
 
         // Call dealloc on input buffer.
         dealloc_->call(store_,
-                       {static_cast<int32_t>(input_ptr),
+                       {static_cast<int32_t>(input_index),
                         static_cast<int32_t>(input_length)}).unwrap();
 
         callback({std::move(vec)});

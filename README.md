@@ -86,20 +86,20 @@ You can create your script under the assumption that the (alloc -> handle_body -
 
 #### Contract
 
-- (1): The Guest module MUST export WASM memory, a function `alloc(i32 size)->(i32 ptr)`, a function `dealloc(i32 ptr, i32 size)->()`, and a function `handle_body(i32 ptr, i32 size)->(i64 packed)`
+- (1): The Guest module MUST export WASM memory, a function `alloc(i32 size)->(i32 index)`, a function `dealloc(i32 index, i32 size)->()`, and a function `handle_body(i32 index, i32 size)->(i64 packed)`
     - (1.1): The Guest module MUST NOT assume that memory from the last packet parsing loop will still exist for the next packet, but it may assume memory from the previous function in the loop is stable
     - (1.2): The alloc function MUST provide a valid 32-bit offset to contiguous memory with enough room for the necessary payload to be written. 
     - (1.3): The Host MUST treat 0 as an allocation failure and callback with an empty response if the input size is positive.
     - (1.4): The Guest MAY decide to implement dealloc to do any cleanup logic needed, or as a no-op
-    - (1.5): The Guest MAY decide to export handle_header(i32 ptr, i32 size)->(i32 size) for reading the header, which will be used like handle_body to get the packet's body size
+    - (1.5): The Guest MAY decide to export handle_header(i32 index, i32 size)->(i32 size) for reading the header, which will be used like handle_body to get the packet's body size
 - (2): The Host MUST start parsing the packet by calling alloc(input_length)
 - (3): The Host MUST then copy the packet header and body into the provided address
 - (4): The Host MUST then call handle_body with the provided address and original input size
     - (4.1): The Guest MUST return a 64-bit integer with the lowest 32-bits as an offset to the output (response) buffer and the highest 32-bits as a size
     - (4.2): The Guest MUST return size as 0 if handle_body failed
-- (5): The Host MUST unpack a 64-bit integer into a 32-bit pointer and 32-bit size using the scheme from (4.1)
-- (6): The Host MUST copy the memory for the response using the provided pointer and size
-- (7): The Host MUST call dealloc on (output_ptr, output_size) if output_size is positive, and then the Host MUST call dealloc on (input_ptr, input_size)
+- (5): The Host MUST unpack a 64-bit integer into a 32-bit index and 32-bit size using the scheme from (4.1)
+- (6): The Host MUST copy the memory for the response using the provided index and size
+- (7): The Host MUST call dealloc on (output_index, output_size) if output_size is positive, and then the Host MUST call dealloc on (input_index, input_size)
 
 ### Script examples
 
