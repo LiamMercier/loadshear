@@ -41,3 +41,11 @@ void dealloc(uint32_t input_ptr, uint32_t input_size)
 {
     heap_top = (uint32_t)(uintptr_t)__heap_base;
 }
+
+// No-op, override by basic header parse settings.
+uint32_t handle_header(uint32_t input_ptr, uint32_t input_size)
+{
+    (void)input_ptr;
+    (void)input_size;
+    return 0;
+}

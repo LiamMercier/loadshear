@@ -15,7 +15,16 @@ extern "C" {
 
     // dealloc can do whatever you wish, if you do dynamic allocation you should
     // probably release memory or reuse it for the next alloc write.
+    //
+    // Most protocols will just have this reset a pointer to where it was before alloc was called.
     void dealloc(uint32_t input_ptr, uint32_t input_size);
+
+    // handle_header follows the same logic as handle_body except it returns the size
+    // of the packet body.
+    //
+    // If you decide to use a default or non-WASM defined header function, this is optional,
+    // you can make this a no-op and simply not export it.
+    uint32_t handle_header(uint32_t input_ptr, uint32_t input_size);
 
 #ifdef __cplusplus
 }

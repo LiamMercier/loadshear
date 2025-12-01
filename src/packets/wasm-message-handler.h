@@ -48,7 +48,7 @@ private:
     std::optional<wasmtime::Func> alloc_;
     std::optional<wasmtime::Func> dealloc_;
     std::optional<wasmtime::Func> handle_body_;
-    // TODO: handle_header_
+    std::optional<wasmtime::Func> handle_header_;
 
     // These cannot be shared across threads, so we must have a MessageHandler per thread.
     mutable wasmtime::Store store_;

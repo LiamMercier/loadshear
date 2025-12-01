@@ -97,6 +97,103 @@ store_(*engine_)
     }
 
     handle_body_ = std::move(*body_ptr);
+
+    // Try to get handle_header, otherwise we will use the header function provided.
+    auto maybe_header = instance_->get(store_, "handle_header");
+
+    if (!maybe_header)
+    {
+        return;
+    }
+
+    auto header_ptr = std::get_if<decltype(handle_header_)::value_type>(&*maybe_body);
+
+    if (!header_ptr)
+    {
+        return;
+    }
+
+    handle_header_ = std::move(*header_ptr);
+
+    // Set the header parsing function to use the WASM header.
+
+    set_header_parser([this](std::span<const uint8_t> buffer) -> HeaderResult {
+        try
+        {
+            // Call WASM otherwise (obscure protocol).
+            uint32_t input_length = static_cast<uint32_t>(buffer.size());
+
+            auto alloc_res = alloc_->call(store_, {static_cast<int32_t>(buffer.size())}).unwrap();
+
+            uint32_t input_ptr = alloc_res[0].i32();
+
+            if (input_ptr == 0)
+            {
+                std::cout << "Bad allocation detected for header\n";
+
+                dealloc_->call(store_,
+                               {static_cast<int32_t>(input_ptr),
+                                static_cast<int32_t>(input_length)}).unwrap();
+
+                return {0, HeaderResult::Status::ERROR};
+            }
+
+            auto mem_view = memory_->data(store_);
+            uint8_t *guest_memory = mem_view.data();
+
+            if (static_cast<uint64_t>(input_ptr) + static_cast<uint64_t>(input_length)
+            > mem_view.size())
+            {
+                std::cout << "OOB behavior detected during header input buffer write. "
+                          << "Your WASM script violates the contract.\n";
+
+                dealloc_->call(store_,
+                               {static_cast<int32_t>(input_ptr),
+                                static_cast<int32_t>(input_length)}).unwrap();
+
+                return {0, HeaderResult::Status::ERROR};
+            }
+
+            std::memcpy(guest_memory + input_ptr,
+                        buffer.data(),
+                        buffer.size());
+
+            auto header_res = handle_header_->call(store_,
+                                                   {static_cast<int32_t>(input_ptr),
+                                                    static_cast<int32_t>(input_length)}).unwrap();
+
+            uint32_t size = 0;
+            int32_t signed_size = header_res[0].i32();
+
+            if (signed_size < 0)
+            {
+                // Handle bad sizes
+                std::cout << "handle_header returned a negative size. "
+                          << "Your WASM script violates the contract.\n";
+
+                dealloc_->call(store_,
+                               {static_cast<int32_t>(input_ptr),
+                                static_cast<int32_t>(input_length)}).unwrap();
+
+                return {size, HeaderResult::Status::ERROR};
+            }
+
+            size = static_cast<uint32_t>(signed_size);
+
+            // Call dealloc
+            dealloc_->call(store_,
+                           {static_cast<int32_t>(input_ptr),
+                            static_cast<int32_t>(input_length)}).unwrap();
+
+            return {size, HeaderResult::Status::OK};
+        }
+        catch (...)
+        {
+            std::cout << "Exception during header input buffer write. "
+                      << "Your WASM script violates the contract.\n";
+            return {0, HeaderResult::Status::ERROR};
+        }
+    });
 }
 
 // We synchronously call the WASM code (runtime is embedded, low overhead). We assume that
@@ -123,7 +220,12 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
         if (input_ptr == 0 && input_length != 0)
         {
             // TODO: log with a log level? Also, remove \n if we do.
-            std::cout << "Bad allocation detected\n";
+            std::cout << "Bad allocation detected for body\n";
+
+            dealloc_->call(store_,
+                           {static_cast<int32_t>(input_ptr),
+                            static_cast<int32_t>(input_length)}).unwrap();
+
             callback({ std::make_shared<std::vector<uint8_t>>() });
             return;
         }
@@ -137,8 +239,13 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
             > mem_view.size())
         {
             // TODO: log?
-            std::cout << "OOB behavior detected during response buffer read. "
+            std::cout << "OOB behavior detected during input buffer write. "
                       << "Your WASM script violates the contract.\n";
+
+            dealloc_->call(store_,
+                           {static_cast<int32_t>(input_ptr),
+                            static_cast<int32_t>(input_length)}).unwrap();
+
             callback({ std::make_shared<std::vector<uint8_t>>() });
             return;
         }
@@ -178,6 +285,15 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
                 // TODO: log?
                 std::cout << "OOB behavior detected during response buffer read. "
                           << "Your WASM script violates the contract.\n";
+
+                dealloc_->call(store_,
+                               {static_cast<int32_t>(out_ptr),
+                                static_cast<int32_t>(out_length)}).unwrap();
+
+                dealloc_->call(store_,
+                               {static_cast<int32_t>(input_ptr),
+                                static_cast<int32_t>(input_length)}).unwrap();
+
                 callback({ std::make_shared<std::vector<uint8_t>>() });
                 return;
             }
@@ -227,10 +343,9 @@ HeaderResult WASMMessageHandler::parse_header(std::span<const uint8_t> buffer) c
     }
     else
     {
-        // Call WASM otherwise (obscure protocol).
-
-        // TODO: WASM setup
-        return parse_header_func(buffer);
+        std::cout << "No header parse function was found! Either provide a WASM "
+                  << "handle_header export or provide byte fields to read in config!\n";
+        return {0, HeaderResult::Status::ERROR};
     }
 }
 
