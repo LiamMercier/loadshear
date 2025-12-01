@@ -107,7 +107,9 @@ TEST(TCPSessionTests, SingleSessionParsing)
     }
 
     // Empty payload manager.
-    PayloadManager payload_manager;
+    std::vector<PayloadDescriptor> payloads;
+    std::vector<uint16_t> steps(payloads.size(), 1);
+    PayloadManager payload_manager(payloads, steps);
 
     // WASMMessageHandler handler(engine, module);
     std::shared_ptr<WASMMessageHandler> handler_ptr;
@@ -301,7 +303,9 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
     }
 
     // Empty payload manager.
-    PayloadManager payload_manager;
+    std::vector<PayloadDescriptor> payloads;
+    std::vector<uint16_t> steps(payloads.size(), 1);
+    PayloadManager payload_manager(payloads, steps);
 
     // WASMMessageHandler handler(engine, module);
     std::shared_ptr<WASMMessageHandler> handler_ptr;

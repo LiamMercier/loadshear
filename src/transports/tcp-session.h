@@ -128,6 +128,8 @@ private:
     // Increasing index into the payloads that need to be sent by this session
     size_t next_payload_index_{0};
 
+    PreparedPayload current_payload_;
+
     // Keep track of how many payload writes are requested if not flooding.
     size_t writes_queued_{0};
 
