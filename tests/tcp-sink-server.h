@@ -65,20 +65,20 @@ private:
     void start_read(std::shared_ptr<BasicSession> session)
     {
         async_read(session->socket,
-                   asio::buffer(session->read_buffer, expected_read_),
-                   [this, session](boost::system::error_code ec, size_t s){
-                       if (ec)
-                       {
-                           std::lock_guard<std::mutex> lock(clients_mutex_);
-                           clients_.erase(session);
-                           return;
-                       }
+                    asio::buffer(session->read_buffer, expected_read_),
+                    [this, session](boost::system::error_code ec, size_t s){
+                        if (ec)
+                        {
+                            std::lock_guard<std::mutex> lock(clients_mutex_);
+                            clients_.erase(session);
+                            return;
+                        }
 
-                       lifetime_received_.fetch_add(s, std::memory_order_relaxed);
+                        lifetime_received_.fetch_add(s, std::memory_order_relaxed);
 
-                       start_read(session);
+                        start_read(session);
 
-                    });
+                });
     }
 
 public:

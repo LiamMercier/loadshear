@@ -17,6 +17,7 @@ struct alignas(COUNTER_ALIGNMENT) PayloadCounter
     uint16_t step;
 };
 
+// Operations allowed for the user.
 enum class PacketOperationType : uint8_t
 {
     IDENTITY,
@@ -26,15 +27,42 @@ enum class PacketOperationType : uint8_t
 
 enum class TimestampFormat : uint8_t
 {
-    SECONDS,
-    MILLISECONDS,
-    MICROSECONDS,
-    NANOSECONDS
+    Seconds,
+    Milliseconds,
+    Microseconds,
+    Nanoseconds
 };
 
-// TODO: make create_operation_type
 struct PacketOperation
 {
+    void make_identity(uint32_t len)
+    {
+        type = PacketOperationType::IDENTITY;
+        length = len;
+
+        // Irrelevant data, just init to 0.
+        little_endian = 0;
+        time_format = TimestampFormat::Seconds;
+    }
+
+    void make_counter(uint32_t len, bool little_end)
+    {
+        type = PacketOperationType::COUNTER;
+        length = len;
+        little_endian = little_end;
+
+        // Irrelevant, just init to 0.
+        time_format = TimestampFormat::Seconds;
+    }
+
+    void make_timestamp(uint32_t len, bool little_end, TimestampFormat format)
+    {
+        type = PacketOperationType::TIMESTAMP;
+        length = len;
+        little_endian = little_end;
+        time_format = format;
+    }
+
     PacketOperationType type;
 
     // Insert length, platform type.

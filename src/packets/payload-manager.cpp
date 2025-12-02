@@ -94,22 +94,22 @@ bool PayloadManager::fill_payload(size_t index, PreparedPayload & payload) const
                 // Interpret as an 8 byte seconds based timestamp.
                 switch (op.time_format)
                 {
-                    case TimestampFormat::SECONDS:
+                    case TimestampFormat::Seconds:
                     {
                         ts_value = std::chrono::duration_cast<std::chrono::seconds>(now).count();
                         break;
                     }
-                    case TimestampFormat::MILLISECONDS:
+                    case TimestampFormat::Milliseconds:
                     {
                         ts_value = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
                         break;
                     }
-                    case TimestampFormat::MICROSECONDS:
+                    case TimestampFormat::Microseconds:
                     {
                         ts_value = std::chrono::duration_cast<std::chrono::microseconds>(now).count();
                         break;
                     }
-                    case TimestampFormat::NANOSECONDS:
+                    case TimestampFormat::Nanoseconds:
                     {
                         ts_value = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
                         break;
