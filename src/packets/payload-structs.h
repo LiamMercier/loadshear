@@ -32,6 +32,7 @@ enum class TimestampFormat : uint8_t
     NANOSECONDS
 };
 
+// TODO: make create_operation_type
 struct PacketOperation
 {
     PacketOperationType type;
