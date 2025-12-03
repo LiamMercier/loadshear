@@ -153,26 +153,31 @@ void PayloadManager::write_numeric(uint8_t *start,
 {
     if (length == 8)
     {
+        uint64_t val_64_bit = raw_numeric;
+
         if (!little_endian)
         {
-            raw_numeric = __builtin_bswap64(raw_numeric);
-            std::memcpy(start, &raw_numeric, 8);
-            return;
+            val_64_bit = __builtin_bswap64(val_64_bit);
         }
+
+        std::memcpy(start, &val_64_bit, 8);
+        return;
     }
     else if (length == 4)
     {
         uint32_t val_32_bit = static_cast<uint32_t>(raw_numeric);
+
         if (!little_endian)
         {
             val_32_bit = __builtin_bswap32(val_32_bit);
-            std::memcpy(start, &val_32_bit, 4);
-            return;
         }
+
+        std::memcpy(start, &val_32_bit, 4);
+        return;
     }
 
     // Write each byte.
-    for (uint16_t i = 0; i < length; i++)
+    for (uint32_t i = 0; i < length; i++)
     {
         // Compute the shift for this byte's mask. If big endian, we have to reverse.
         int shift = little_endian ? (i * 8) : ((length - 1 - i) * 8);

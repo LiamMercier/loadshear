@@ -1,6 +1,7 @@
 add_executable(unit-tests
     main-tests.cpp
     tcp-session-tests.cpp
+    payload-manager-tests.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
