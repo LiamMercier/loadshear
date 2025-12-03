@@ -146,6 +146,8 @@ bool PayloadManager::fill_payload(size_t index, PreparedPayload & payload) const
 }
 
 // Write numeric from little endian host to buffer.
+//
+// TODO <feature>: We could re-write this using compiler definitions to support big endian hosts.
 void PayloadManager::write_numeric(uint8_t *start,
                                    uint64_t raw_numeric,
                                    uint32_t length,

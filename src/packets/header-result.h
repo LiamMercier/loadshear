@@ -6,7 +6,7 @@ struct HeaderResult
 {
     enum class Status
     {
-        OK,
+        OK = 0,
         ERROR,
         TIMEOUT
     };
