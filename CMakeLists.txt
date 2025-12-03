@@ -13,7 +13,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEV_BUILD)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
 
 # We need to use the wasmtime c-api since it is a rust project.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/wasmtime/crates/c-api ${CMAKE_CURRENT_BINARY_DIR}/wasmtime)

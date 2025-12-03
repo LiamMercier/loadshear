@@ -16,6 +16,7 @@ message_handler_(message_handler),
 payload_manager_(payload_manager),
 on_disconnect_(on_disconnect)
 {
+    current_payload_.temps.reserve(MESSAGE_BUFFER_SIZE);
 }
 
 // Always the first function called on the Session if any are called.
@@ -259,8 +260,7 @@ void TCPSession::do_write()
             writes_queued_--;
 
             // Grab the payload from the payload manger.
-            PreparedPayload payload;
-            bool valid_payload = payload_manager_.fill_payload(next_payload_index_, payload);
+            bool valid_payload = payload_manager_.fill_payload(next_payload_index_, current_payload_);
 
             if (!valid_payload)
             {
@@ -281,10 +281,9 @@ void TCPSession::do_write()
 
             writing_ = true;
 
-            asio::async_write(socket_, payload.packet_slices,
+            asio::async_write(socket_, current_payload_.packet_slices,
             asio::bind_executor(strand_,
-                [self = shared_from_this(),
-                 payload = std::move(payload)](boost::system::error_code ec, size_t){
+                [self = shared_from_this()](boost::system::error_code ec, size_t){
                     if (ec)
                     {
                         self->handle_stream_error(ec);
