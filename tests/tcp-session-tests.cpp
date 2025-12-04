@@ -3,41 +3,13 @@
 #include <iostream>
 #include <thread>
 #include <memory>
-#include <filesystem>
-#include <fstream>
 
 #include "wasm-message-handler.h"
 #include "tcp-session.h"
 
 #include "tcp-broadcast-server.h"
 #include "tcp-sink-server.h"
-
-static std::vector<uint8_t> read_binary_file(const std::string & path)
-{
-    std::ifstream file(path, std::ios::binary);
-
-    if (!file)
-    {
-        throw std::runtime_error("File " + path + " does not exist\n");
-    }
-
-    std::error_code ec;
-    size_t filesize = static_cast<size_t>(std::filesystem::file_size(path, ec));
-
-    if (ec)
-    {
-        throw std::runtime_error("Call file_size for " + path + " failed\n");
-    }
-
-    std::vector<uint8_t> buffer(filesize);
-
-    if (!file.read(reinterpret_cast<char *>(buffer.data()), filesize))
-    {
-        throw std::runtime_error("File " + path + " read failed\n");
-    }
-
-    return buffer;
-}
+#include "test-helpers.h"
 
 TEST(TCPSessionTests, SingleSessionParsing)
 {
