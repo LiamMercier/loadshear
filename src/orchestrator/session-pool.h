@@ -30,7 +30,7 @@ class SessionPool
     static_assert(std::is_invocable_v<decltype(&Session::send),
                                       Session &,
                                       size_t>,
-                  "Session is missing flood()");
+                  "Session is missing send()");
 
     static_assert(std::is_invocable_v<decltype(&Session::stop),
                                       Session &>,
@@ -81,22 +81,70 @@ public:
 
     }
 
-    void start_all_sessions(const Session::Endpoints & endpoints)
+    void start_sessions_range(const Session::Endpoints & endpoints,
+                              size_t start,
+                              size_t end)
     {
-        for (size_t i = 0; i < sessions_.size(); i++)
+        if (closed_)
+        {
+            return;
+        }
+
+        active_sessions_ += end - start;
+
+        for (size_t i = start; i < end; i++)
         {
             sessions_[i]->start(endpoints);
         }
+    }
 
-        active_sessions_ = sessions_.size();
+    void send_sessions_range(size_t start, size_t end, size_t N)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->send(N);
+        }
+    }
+
+    void flood_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->flood();
+        }
+    }
+
+    void stop_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->stop();
+        }
+    }
+
+    void start_all_sessions(const Session::Endpoints & endpoints)
+    {
+        start_sessions_range(0, sessions_.size());
     }
 
     void stop_all_sessions()
     {
-        for (size_t i = 0; i < sessions_.size(); i++)
-        {
-            sessions_[i]->stop();
-        }
+        stop_sessions_range(0, sessions_.size());
     }
 
     size_t active_sessions() const
@@ -118,8 +166,8 @@ private:
             bool expected = false;
             if(closed_.compare_exchange_strong(expected, true))
             {
-                // TODO: post callback to controlling class.
                 notify_closed_();
+                return;
             }
 
 

@@ -2,8 +2,11 @@
 
 enum class ActionType : uint8_t
 {
-    CONNECT = 0,
-    SEND
+    CREATE = 0,
+    CONNECT,
+    SEND,
+    FLOOD,
+    DISCONNECT
 };
 
 struct ActionDescriptor
@@ -14,8 +17,8 @@ struct ActionDescriptor
     uint32_t sessions_start;
     uint32_t sessions_end;
 
-    // For SEND to specify copies.
-    uint32_t copies;
+    // For SEND or CREATE to specify copies.
+    uint32_t count;
 
     // TODO: decide if we really need this.
     uint32_t host_id;
