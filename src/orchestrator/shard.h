@@ -283,7 +283,6 @@ private:
 
     // Orchestrator specific host information.
     HostInfo<Session> host_info_;
-    uint32_t last_host_id{UINT32_MAX};
 
     // Orchestrator callback.
     NotifyShardClosed on_shard_closed_;

@@ -1,6 +1,7 @@
 #include "payload-manager.h"
 
 #include <chrono>
+#include <iostream>
 
 PayloadManager::PayloadManager(std::vector<PayloadDescriptor> payloads,
                                std::vector<uint16_t> steps)
@@ -10,7 +11,17 @@ counters_(payloads_.size())
     for (size_t i = 0; i < counters_.size(); i++)
     {
         counters_[i].counter = 0;
-        counters_[i].step = steps[i];
+
+        // Prevent OOB access.
+        if (i > counters_.size())
+        {
+            counters_[i].step = 1;
+            std::cerr << "Warning! Counter steps was out of bounds!\n";
+        }
+        else
+        {
+            counters_[i].step = steps[i];
+        }
     }
 }
 
