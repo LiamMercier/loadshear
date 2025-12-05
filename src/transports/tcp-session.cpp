@@ -81,6 +81,20 @@ void TCPSession::send(size_t N)
     });
 }
 
+void TCPSession::drain()
+{
+    asio::post(strand_, [self = shared_from_this()]{
+        self->draining_ = true;
+
+        if (!self->writing_
+            && self->writes_queued_ == 0
+            && self->responses_.empty())
+        {
+            self->close_session();
+        }
+    });
+}
+
 // Stop the session and callback to the orchestrator
 void TCPSession::stop()
 {
@@ -213,6 +227,11 @@ void TCPSession::try_start_write()
     {
         do_write();
     }
+    // Handle draining but nothing queued.
+    else if (draining_)
+    {
+        close_session();
+    }
 }
 
 // There should only be one outstanding write per socket to maximize throughput. Why?
@@ -253,11 +272,16 @@ void TCPSession::do_write()
     }
     else
     {
+        // If draining, force flood to stop.
+        bool effective_flood = flood_ && !draining_;
+
         // If flooding or writes are queued, write payloads.
-        if (flood_ || writes_queued_ > 0)
+        if (effective_flood || writes_queued_ > 0)
         {
-            // If flood is enabled, we don't turn it off, overflow is meaningless.
-            writes_queued_--;
+            if (!effective_flood)
+            {
+                writes_queued_--;
+            }
 
             // Grab the payload from the payload manger.
             bool valid_payload = payload_manager_.fill_payload(next_payload_index_, current_payload_);
@@ -273,6 +297,12 @@ void TCPSession::do_write()
 
                 // If not looping, stop writing, we are done.
                 writing_ = false;
+
+                if (draining_)
+                {
+                    close_session();
+                }
+
                 return;
             }
 
@@ -299,6 +329,11 @@ void TCPSession::do_write()
         {
             // We stopped writing, set to false.
             writing_ = false;
+
+            if (draining_)
+            {
+                close_session();
+            }
         }
 
         return;

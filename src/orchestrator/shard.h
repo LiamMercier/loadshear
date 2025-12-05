@@ -33,10 +33,12 @@ public:
           NotifyShardClosed on_shard_closed)
     :work_guard_(asio::make_work_guard(cntx_)),
     running_(false),
+    drain_timer_(cntx_),
+    stop_timer_(cntx_),
+    handler_factory_(std::move(handler_factory)),
+    payload_manager_(std::move(manager_ptr)),
     config_(config),
     session_pool_(cntx_, config_, [this](){ this->on_sessions_closed(); }),
-    payload_manager_(std::move(manager_ptr)),
-    handler_factory_(std::move(handler_factory)),
     host_info_(std::move(host_info_copy)),
     on_shard_closed_(std::move(on_shard_closed))
     {
@@ -84,13 +86,21 @@ public:
         }
 
         asio::post(cntx_, [this](){
-            session_pool_.stop_all_sessions();
 
+            boost::system::error_code ignored;
+            drain_timer_.cancel(ignored);
 
+            if (session_pool_.active_sessions() > 0)
+            {
+                session_pool_.stop_all_sessions();
+
+                // Start force shutdown timer for if pool refuses to close everything.
+                start_force_stop_timer(30*1000);
+            }
+
+            // Reset work guard now.
+            work_guard_.reset();
         });
-
-        // Reset work guard now.
-        work_guard_.reset();
     }
 
     // For external use only. Do not call from the shard's thread (deadlock).
@@ -106,6 +116,7 @@ public:
     ~Shard()
     {
         stop();
+        join();
     }
 
 private:
@@ -175,6 +186,15 @@ private:
                                                    action.sessions_end);
                 break;
             }
+            case ActionType::DRAIN:
+            {
+                session_pool_.drain_sessions_range(action.sessions_start,
+                                                   action.sessions_end);
+
+                // Start drain watchdog.
+                start_drain_watchdog(action.count);
+                break;
+            }
             case ActionType::DISCONNECT:
             {
                 session_pool_.stop_sessions_range(action.sessions_start,
@@ -188,13 +208,37 @@ private:
         }
     }
 
-    // Prevent the shard from hanging if we can't close session's.
-    void start_force_stop_timer()
+    // Prevent long running drain operations.
+    void start_drain_watchdog(size_t timeout_ms)
     {
-        auto timer = std::make_shared<asio::steady_timer>(cntx_);
-        timer->expires_after(std::chrono::seconds(20));
-        timer->async_wait(
-            [this, timer](const boost::system::error_code & ec){
+
+        boost::system::error_code ignored;
+        drain_timer_.cancel(ignored);
+
+        drain_timer_.expires_after(std::chrono::milliseconds(timeout_ms));
+
+        drain_timer_.async_wait(
+            [this](const boost::system::error_code & ec){
+                if (ec)
+                {
+                    return;
+                }
+
+                std::cerr << "Shard drain taking too long. Forcing stop.\n";
+
+                this->stop();
+        });
+    }
+
+    // Prevent the shard from hanging if we can't close session's.
+    void start_force_stop_timer(size_t timeout_ms)
+    {
+        boost::system::error_code ignored;
+        stop_timer_.cancel(ignored);
+
+        stop_timer_.expires_after(std::chrono::milliseconds(timeout_ms));
+        stop_timer_.async_wait(
+            [this](const boost::system::error_code & ec){
                 if (!ec && !cntx_.stopped())
                 {
                     cntx_.stop();
@@ -206,6 +250,9 @@ private:
     void on_sessions_closed()
     {
         stop();
+
+        boost::system::error_code ignored;
+        stop_timer_.cancel(ignored);
     }
 
 private:
@@ -219,18 +266,20 @@ private:
     std::atomic<bool> running_{false};
 
     // Shutdown
-    bool sessions_closed_{false};
+    asio::steady_timer drain_timer_;
+    asio::steady_timer stop_timer_;
 
     //
     // Session specific members.
     //
-    SessionConfig config_;
-    SessionPool<Session> session_pool_;
-    std::shared_ptr<const PayloadManager> payload_manager_;
 
     // We need a thread specific message handler depending on the user's settings.
     MessageHandlerFactory handler_factory_;
     std::unique_ptr<MessageHandler> message_handler_;
+    std::shared_ptr<const PayloadManager> payload_manager_;
+
+    SessionConfig config_;
+    SessionPool<Session> session_pool_;
 
     // Orchestrator specific host information.
     HostInfo<Session> host_info_;

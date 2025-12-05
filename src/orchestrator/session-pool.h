@@ -32,6 +32,10 @@ class SessionPool
                                       size_t>,
                   "Session is missing send()");
 
+    static_assert(std::is_invocable_v<decltype(&Session::drain),
+                                      Session &>,
+                  "Session is missing drain()");
+
     static_assert(std::is_invocable_v<decltype(&Session::stop),
                                       Session &>,
                   "Session is missing stop()");
@@ -121,6 +125,19 @@ public:
         for (size_t i = start; i < end; i++)
         {
             sessions_[i]->flood();
+        }
+    }
+
+    void drain_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->drain();
         }
     }
 

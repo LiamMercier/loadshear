@@ -139,10 +139,10 @@ TEST(TCPShardTests, SingleShardTest)
     });
 
     actions.push_back({
-        ActionType::DISCONNECT,
+        ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        0
+        10*1000
     });
 
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
@@ -151,14 +151,7 @@ TEST(TCPShardTests, SingleShardTest)
         const auto & action = actions[action_index];
         s1.submit_work(action);
 
-        if (action.type == ActionType::DISCONNECT)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-        else
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
     if (server_thread.joinable())
@@ -166,6 +159,9 @@ TEST(TCPShardTests, SingleShardTest)
         server_thread.join();
     }
 
+    // Join the shard, this would be done in the Orchestrator after our shard calls back and
+    // says it can be joined. We could just wait on a condition variable in the Orchestrator
+    // and we will not end up eating resources because our thread will be marked as blocked.
     s1.join();
 
     EXPECT_EQ(server.lifetime_received_,

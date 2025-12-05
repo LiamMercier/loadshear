@@ -6,6 +6,7 @@ enum class ActionType : uint8_t
     CONNECT,
     SEND,
     FLOOD,
+    DRAIN,
     DISCONNECT
 };
 
@@ -18,5 +19,7 @@ struct ActionDescriptor
     uint32_t sessions_end;
 
     // For SEND or CREATE to specify copies.
+    //
+    // For DRAIN, this defines the seconds until we force stop.
     uint32_t count;
 };
