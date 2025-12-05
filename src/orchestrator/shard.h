@@ -26,7 +26,6 @@ public:
 
 public:
 
-    // TODO: implement NotifyClosed for SessionPool, currently no-op.
     Shard(std::shared_ptr<const PayloadManager> manager_ptr,
           MessageHandlerFactory handler_factory,
           SessionConfig config,
@@ -125,7 +124,6 @@ private:
             std::cerr << "Shard got exception: " << error.what() << "\n";
             work_guard_.reset();
             cntx_.stop();
-            // TODO: callback that we're closing to orchestrator?
             return;
         }
 
@@ -134,6 +132,12 @@ private:
         {
             on_shard_closed_();
         }
+#ifdef DEV_BUILD
+        else
+        {
+            std::cout << "Shard did not have callback on close!\n";
+        }
+#endif
     }
 
     void handle_action(ActionDescriptor action)
@@ -146,8 +150,8 @@ private:
                 session_pool_.create_sessions(action.count,
                                               cntx_,
                                               config_,
-                                              message_handler_,
-                                              payload_manager_);
+                                              *message_handler_,
+                                              *payload_manager_);
                 break;
             }
             case ActionType::CONNECT:
@@ -201,6 +205,7 @@ private:
     // Called by the session pool callback. Could be used to collect analytics.
     void on_sessions_closed()
     {
+        stop();
     }
 
 private:

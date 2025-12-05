@@ -5,6 +5,7 @@
 
 #include "shard.h"
 #include "payload-manager.h"
+#include "wasm-message-handler.h"
 #include "tcp-session.h"
 
 TEST(TCPShardTests, SingleShardTest)
@@ -37,38 +38,142 @@ TEST(TCPShardTests, SingleShardTest)
     //
     std::vector<PayloadDescriptor> payloads;
 
-    // Create 8 payloads from the base "hello world" packet for different lengths.
     for (int i = 0; i < BASE_NUM_PAYLOADS; i++)
     {
+        // Alternative between little endian and big endian
+        bool little_endian = (i % 2);
+        uint32_t len = i;
+
         PacketOperation identity_op_missing_bytes;
-        identity_op_missing_bytes.make_identity(packet_size - i);
+        identity_op_missing_bytes.make_identity(packet_size - len);
+
+        PacketOperation counter_op;
+        counter_op.make_counter(len, little_endian);
 
         payloads.push_back({{packet_1.data(), packet_1.size()},
-                           std::vector<PacketOperation>{identity_op_missing_bytes} });
+                           std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
     std::vector<uint16_t> steps(payloads.size(), 1);
-    PayloadManager payload_manager(payloads, steps);
+    auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
 
     //
     // Create the message handler.
     //
 
-    // TODO: figure out factory logic.
+    // Our orchestrator will hold a shared pointer to a WASM engine and copy of the module.
+    //
+    // This can be passed to each Shard.
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
 
+    std::vector<uint8_t> wasm_bytes;
 
-    // Turn this test off.
-    asio::steady_timer stop_timer(server_cntx, std::chrono::milliseconds(530));
-    stop_timer.async_wait([&](const boost::system::error_code &)
+    try {
+        wasm_bytes = read_binary_file("tests/modules/tcp-single-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
     {
-        // This should stop the context.
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
+
+    if (!module_tmp)
+    {
         server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        FAIL();
+    }
+
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
+
+    Shard<TCPSession>::MessageHandlerFactory factory =
+        [engine, module]() -> std::unique_ptr<MessageHandler>
+        {
+            return std::make_unique<WASMMessageHandler>(engine, module);
+        };
+
+    // Create one shard to do work.
+    Shard s1(payload_manager,
+             factory,
+             config,
+             host_info,
+             [&](){ server_cntx.stop(); });
+
+    // Start the shard.
+    s1.start();
+
+    std::vector<ActionDescriptor> actions;
+
+    uint32_t NUM_SESSIONS = 50;
+
+    // Create NUM_SESSION session's. Only thing that matters is count.
+    actions.push_back({
+        ActionType::CREATE,
+        0,
+        0,
+        NUM_SESSIONS
     });
+
+    // Connect each session.
+    actions.push_back({
+        ActionType::CONNECT,
+        0,
+        NUM_SESSIONS,
+        0
+    });
+
+    // Enable flood on each session.
+    actions.push_back({
+        ActionType::FLOOD,
+        0,
+        NUM_SESSIONS,
+        0
+    });
+
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        0
+    });
+
+    // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
+    for (size_t action_index = 0; action_index < actions.size(); action_index++)
+    {
+        const auto & action = actions[action_index];
+        s1.submit_work(action);
+
+        if (action.type == ActionType::DISCONNECT)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }
 
     if (server_thread.joinable())
     {
         server_thread.join();
     }
 
-    FAIL();
+    s1.join();
+
+    EXPECT_EQ(server.lifetime_received_,
+              packet_size * payloads.size() * NUM_SESSIONS) << "Server only got "
+                                                            << server.lifetime_received_
+                                                            << " of "
+                                                            << packet_size
+                                                               * payloads.size()
+                                                               * NUM_SESSIONS
+                                                            << " bytes!";
 }

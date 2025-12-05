@@ -19,7 +19,4 @@ struct ActionDescriptor
 
     // For SEND or CREATE to specify copies.
     uint32_t count;
-
-    // TODO: decide if we really need this.
-    uint32_t host_id;
 };
