@@ -34,7 +34,7 @@ private:
 
         explicit BasicSession(asio::io_context & cntx)
         :socket(cntx),
-        read_buffer(1024*4)
+        read_buffer(1024*8)
         {
 
         }

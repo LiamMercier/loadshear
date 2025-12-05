@@ -6,6 +6,7 @@ enum class ActionType : uint8_t
     CONNECT,
     SEND,
     FLOOD,
+    WAIT,
     DRAIN,
     DISCONNECT
 };

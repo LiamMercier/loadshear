@@ -132,3 +132,5 @@ TODO: show a respond heartbeat example
 The tests rely on .wasm files to run. If you do not wish to use the provided binary files, feel free to compile them yourself using the examples in the sdk directory.
 
 TODO: make a script to compile each file
+
+Some tests are hidden behind an environment variable. You can run these with `RUN_HEAVY_GTEST=1` if you wish. Some tests may require more file descriptors than allowed by default, you may need to use `ulimit -n 8192` or something similar.
