@@ -1,5 +1,6 @@
 #pragma once
 
+#include "action-descriptor.h"
 #include "orchestrator-config.h"
 #include "shard.h"
 
@@ -7,61 +8,38 @@ template<typename Session>
 class Orchestrator
 {
 public:
+
+using MessageHandlerFactory = Shard<Session>::MessageHandlerFactory;
+using NotifyShardClosed = Shard<Session>::NotifyShardClosed;
+
+public:
     Orchestrator(std::vector<ActionDescriptor> actions,
                  std::vector<PayloadDescriptor> payloads,
-                 std::vector<uint16_t> steps,
+                 std::vector<uint16_t> counter_steps,
                  OrchestratorConfig<Session> config)
     :actions_(std::move(actions)),
     config_(std::move(config)),
-    payload_manager_(std::make_shared<PayloadManager>(payloads, steps))
+    payload_manager_(std::make_shared<PayloadManager>(payloads, counter_steps))
     {
-        // Try to compile the module
         try
         {
-            // If WASM enabled.
-            if ()
-            {
-                wasm_engine_ = std::make_shared<wasmtime::Engine>(config_.wasm_config);
-
-                auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
-
-                if (!module_tmp)
-                {
-                    std::cerr << "Failed to construct orchestrator. Closing.\n";
-                    return;
-                }
-
-                wasm_module_ = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
-            }
-
             // Try to create shards.
             shards_.reserve(config_.shard_count);
 
             for (size_t i = 0; i < config_.shard_count; i++)
             {
-                Shard<Session>::MessageHandlerFactory msg_factory_;
-
-                if ()
-                {
-                    // If we use WASM, vs if we use __ vs ?
-                    msg_factory_ = [wasm_engine_, wasm_module_]() -> std::unique_ptr<MessageHandler>
-                    {
-                        // TODO:
-                    };
-                }
-
                 // TODO: callback
-                Shard<Session>::NotifyShardClosed on_shard_callback =
+                typename Shard<Session>::NotifyShardClosed on_shard_callback =
                     [](){
 
                     };
 
                 // make pointer to shard
                 shards_.emplace_back(std::make_unique<Shard<TCPSession>>
-                                        (payload_manager,
-                                         factory,
-                                         config,
-                                         host_info,
+                                        (payload_manager_,
+                                         config_.handler_factory_,
+                                         config_.session_config,
+                                         config_.host_info,
                                          on_shard_callback));
             }
 
@@ -115,6 +93,6 @@ private:
     std::shared_ptr<PayloadManager> payload_manager_;
     std::vector<std::unique_ptr<Shard<Session>>> shards_;
 
-    std::shared_ptr<wasmtime::Engine> wasm_engine_;
-    std::shared_ptr<wasmtime::Module> wasm_module_;
+    // std::shared_ptr<wasmtime::Engine> wasm_engine_;
+    // std::shared_ptr<wasmtime::Module> wasm_module_;
 };
