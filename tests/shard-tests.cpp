@@ -119,7 +119,8 @@ TEST(TCPShardTests, SingleShardTest)
         ActionType::CREATE,
         0,
         0,
-        NUM_SESSIONS
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
     });
 
     // Connect each session.
@@ -127,7 +128,8 @@ TEST(TCPShardTests, SingleShardTest)
         ActionType::CONNECT,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(0)
     });
 
     // Enable flood on each session.
@@ -135,14 +137,16 @@ TEST(TCPShardTests, SingleShardTest)
         ActionType::FLOOD,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(0)
     });
 
     actions.push_back({
         ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        10*1000
+        10*1000,
+        std::chrono::milliseconds(0)
     });
 
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
@@ -296,7 +300,8 @@ TEST(TCPShardTests, MultiShardTest)
         ActionType::CREATE,
         0,
         0,
-        NUM_SESSIONS
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
     });
 
     // Connect each session.
@@ -304,7 +309,8 @@ TEST(TCPShardTests, MultiShardTest)
         ActionType::CONNECT,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(0)
     });
 
     // Enable flood on each session.
@@ -312,14 +318,16 @@ TEST(TCPShardTests, MultiShardTest)
         ActionType::FLOOD,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(0)
     });
 
     actions.push_back({
         ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        10*1000
+        10*1000,
+        std::chrono::milliseconds(0)
     });
 
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
@@ -489,7 +497,8 @@ TEST(TCPShardTests, MultiShardHeavy)
         ActionType::CREATE,
         0,
         0,
-        NUM_SESSIONS
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
     });
 
     // Connect each session.
@@ -499,7 +508,8 @@ TEST(TCPShardTests, MultiShardHeavy)
             ActionType::CONNECT,
             i * NUM_SESSIONS / 10,
             (i+1) * NUM_SESSIONS / 10,
-            0
+            0,
+            std::chrono::milliseconds(0)
         });
     }
 
@@ -508,14 +518,16 @@ TEST(TCPShardTests, MultiShardHeavy)
         ActionType::FLOOD,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(0)
     });
 
     actions.push_back({
         ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        10*1000
+        10*1000,
+        std::chrono::milliseconds(0)
     });
 
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.

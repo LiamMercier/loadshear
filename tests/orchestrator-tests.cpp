@@ -145,7 +145,9 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
                                           steps,
                                           orchestrator_config);
 
-    // Start the shards.
+    // Start the orchestrator.
+
+    orchestrator.start();
 
     if (server_thread.joinable())
     {

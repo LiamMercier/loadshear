@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 enum class ActionType : uint8_t
 {
     CREATE = 0,
@@ -23,4 +25,7 @@ struct ActionDescriptor
     //
     // For DRAIN, this defines the seconds until we force stop.
     uint32_t count;
+
+    // Record the timepoint offset for our orchestrator's timer loop.
+    std::chrono::milliseconds offset;
 };
