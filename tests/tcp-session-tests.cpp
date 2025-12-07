@@ -17,14 +17,16 @@ TEST(TCPSessionTests, SingleSessionParsing)
     asio::io_context server_cntx;
     asio::ip::tcp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
 
-    uint64_t server_interval_ms = 50;
+    uint64_t server_interval_ms = 5;
+    uint64_t total_packets = 10;
 
     std::vector<uint8_t> packet{ 0x1, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0 };
 
     TCPBroadcastServer server(server_cntx,
                               server_ep,
                               server_interval_ms,
-                              packet);
+                              packet,
+                              total_packets);
 
     std::thread server_thread([&]
     {
@@ -140,8 +142,8 @@ TEST(TCPSessionTests, SingleSessionParsing)
 
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
@@ -199,7 +201,7 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
     asio::io_context server_cntx;
     asio::ip::tcp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
 
-    uint64_t server_interval_ms = 50;
+    uint64_t server_interval_ms = 5;
 
     // Send ping packets with body length 2, little endian.
     //
@@ -208,10 +210,13 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
                                  0x2, 0x0, 0x0, 0x0,
                                  0xa, 0xb };
 
+    uint64_t total_packets = 10;
+
     TCPBroadcastServer server(server_cntx,
                               server_ep,
                               server_interval_ms,
-                              packet);
+                              packet,
+                              total_packets);
 
     std::thread server_thread([&]
     {
@@ -318,8 +323,8 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
 
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
@@ -487,8 +492,8 @@ TEST(TCPSessionTests, SingleSessionWriteOne)
 
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
@@ -664,8 +669,8 @@ TEST(TCPSessionTests, SingleSessionCounterFlood)
         session_ptr->flood();
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
@@ -848,8 +853,8 @@ TEST(TCPSessionTests, SingleSessionTimestampFlood)
         session_ptr->flood();
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.
@@ -1035,8 +1040,8 @@ TEST(TCPSessionTests, MultiSessionCounterFlood)
         session_ptr_2->flood();
     });
 
-    // Turn this test off after 500ms of responding.
-    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(530));
+    // Turn this test off after 100ms of responding.
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
     stop_timer.async_wait([&](const boost::system::error_code &)
     {
         // This should stop the context.

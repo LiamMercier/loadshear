@@ -122,7 +122,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         0,
         NUM_SESSIONS,
         0,
-        std::chrono::milliseconds(250)
+        std::chrono::milliseconds(100)
     });
 
     // Enable flood on each session.
@@ -131,7 +131,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         0,
         NUM_SESSIONS,
         0,
-        std::chrono::milliseconds(350)
+        std::chrono::milliseconds(150)
     });
 
     actions.push_back({
@@ -139,7 +139,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         0,
         NUM_SESSIONS,
         10*1000,
-        std::chrono::milliseconds(350)
+        std::chrono::milliseconds(200)
     });
 
     // Create the orchestrator.

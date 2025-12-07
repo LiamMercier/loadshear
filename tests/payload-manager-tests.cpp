@@ -8,8 +8,6 @@
 
 TEST(PayloadManagerTests, CheckPayloadBytes)
 {
-    std::cout << "Starting payload checks \n\n\n";
-
     std::vector<uint8_t> packet_1 = read_binary_file("tests/packets/test-packet-1.bin");
     size_t packet_size = packet_1.size();
 

@@ -118,7 +118,7 @@ TEST(TCPShardTests, SingleShardTest)
     actions.push_back({
         ActionType::CREATE,
         0,
-        0,
+        NUM_SESSIONS,
         NUM_SESSIONS,
         std::chrono::milliseconds(0)
     });
@@ -299,7 +299,7 @@ TEST(TCPShardTests, MultiShardTest)
     actions.push_back({
         ActionType::CREATE,
         0,
-        0,
+        NUM_SESSIONS,
         NUM_SESSIONS,
         std::chrono::milliseconds(0)
     });
@@ -496,7 +496,7 @@ TEST(TCPShardTests, MultiShardHeavy)
     actions.push_back({
         ActionType::CREATE,
         0,
-        0,
+        NUM_SESSIONS,
         NUM_SESSIONS,
         std::chrono::milliseconds(0)
     });
@@ -526,7 +526,7 @@ TEST(TCPShardTests, MultiShardHeavy)
         ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        10*1000,
+        10*3000,
         std::chrono::milliseconds(0)
     });
 
@@ -535,12 +535,31 @@ TEST(TCPShardTests, MultiShardHeavy)
     {
         const auto & action = actions[action_index];
 
+        // We need to actually give some delay to DRAIN for this test, since we will
+        // have many Session objects that connect but never start writing (and thus close).
+        //
+        // This is because we are spinning up a bunch of TCP sockets and writes all at once,
+        // so we are going to cause the io_context to be flooded, thus we see callbacks
+        // very late, thus we see DRAIN before on_connect for the starved session's and
+        // thus we do not get the expected number of bytes written.
+        //
+        // So, give them around 300ms to start writing and then drain.
+        //
+        // If you were using this tool to flood, you would not care about a deterministic
+        // number of bytes being written anyways, so it is a non-issue in my opinion.
+        if (action.type == ActionType::DRAIN)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        }
+
         for (auto & shard : shards)
         {
              shard->submit_work(action);
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
     if (server_thread.joinable())
