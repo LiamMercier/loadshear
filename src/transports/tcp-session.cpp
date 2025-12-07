@@ -52,7 +52,7 @@ void TCPSession::flood()
         // If we are already flooding, don't try to open two flood loops.
         //
         // See the discussion above do_flood() for why.
-        if (self->flood_)
+        if (self->flood_ || self->draining_)
         {
             return;
         }
@@ -272,13 +272,10 @@ void TCPSession::do_write()
     }
     else
     {
-        // If draining, force flood to stop.
-        bool effective_flood = flood_ && !draining_;
-
         // If flooding or writes are queued, write payloads.
-        if (effective_flood || writes_queued_ > 0)
+        if (flood_ || writes_queued_ > 0)
         {
-            if (!effective_flood)
+            if (!flood_)
             {
                 writes_queued_--;
             }

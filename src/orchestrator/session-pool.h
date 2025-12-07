@@ -85,6 +85,7 @@ public:
 
     }
 
+    // call start on index values [start, end)
     void start_sessions_range(const Session::Endpoints & endpoints,
                               size_t start,
                               size_t end)
@@ -102,6 +103,7 @@ public:
         }
     }
 
+    // call send on index values [start, end)
     void send_sessions_range(size_t start, size_t end, size_t N)
     {
         if (closed_)
@@ -115,6 +117,7 @@ public:
         }
     }
 
+    // call flood on index values [start, end)
     void flood_sessions_range(size_t start, size_t end)
     {
         if (closed_)
@@ -128,6 +131,7 @@ public:
         }
     }
 
+    // call drain on index values [start, end)
     void drain_sessions_range(size_t start, size_t end)
     {
         if (closed_)
@@ -141,6 +145,7 @@ public:
         }
     }
 
+    // call stop on index values [start, end)
     void stop_sessions_range(size_t start, size_t end)
     {
         if (closed_)

@@ -105,14 +105,15 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
     // Create the list of actions
     std::vector<ActionDescriptor> actions;
 
-    uint32_t NUM_SESSIONS = 50;
+    uint32_t NUM_SESSIONS = 170;
 
     // Create NUM_SESSION session's. Only thing that matters is count.
     actions.push_back({
         ActionType::CREATE,
         0,
-        0,
-        NUM_SESSIONS
+        NUM_SESSIONS,
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
     });
 
     // Connect each session.
@@ -120,7 +121,8 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         ActionType::CONNECT,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(250)
     });
 
     // Enable flood on each session.
@@ -128,14 +130,16 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         ActionType::FLOOD,
         0,
         NUM_SESSIONS,
-        0
+        0,
+        std::chrono::milliseconds(350)
     });
 
     actions.push_back({
         ActionType::DRAIN,
         0,
         NUM_SESSIONS,
-        10*1000
+        10*1000,
+        std::chrono::milliseconds(350)
     });
 
     // Create the orchestrator.
@@ -146,8 +150,10 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
                                           orchestrator_config);
 
     // Start the orchestrator.
-
     orchestrator.start();
+
+    // After the orchestrator stops, we stop the server and exit.
+    server_cntx.stop();
 
     if (server_thread.joinable())
     {
@@ -157,13 +163,11 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
     EXPECT_EQ(server.lifetime_received_,
               packet_size
               * payloads.size()
-              * NUM_SESSIONS
-              * orchestrator_config.shard_count) << "Server only got "
-                                                 << server.lifetime_received_
-                                                 << " of "
-                                                 << packet_size
-                                                     * payloads.size()
-                                                     * NUM_SESSIONS
-                                                     * orchestrator_config.shard_count
-                                                 << " bytes!";
+              * NUM_SESSIONS) << "Server only got "
+                              << server.lifetime_received_
+                              << " of "
+                              << packet_size
+                                  * payloads.size()
+                                  * NUM_SESSIONS
+                              << " bytes!";
 }

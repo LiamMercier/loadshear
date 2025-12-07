@@ -158,7 +158,7 @@ private:
             case ActionType::CREATE:
             {
                 // Create requested number of sessions.
-                session_pool_.create_sessions(action.count,
+                session_pool_.create_sessions(action.sessions_end - action.sessions_start,
                                               cntx_,
                                               config_,
                                               *message_handler_,
