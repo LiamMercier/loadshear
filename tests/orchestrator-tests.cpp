@@ -174,6 +174,11 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
 
 TEST(TCPOrchestratorTests, HeavyMultishardWASM)
 {
+    if (std::getenv("RUN_HEAVY_GTEST") == nullptr)
+    {
+        GTEST_SKIP() << "RUN_HEAVY_GTEST was disabled. Set RUN_HEAVY_GTEST=1 to run.";
+    }
+
     std::vector<uint8_t> packet_1 = read_binary_file("tests/packets/test-packet-1.bin");
     size_t packet_size = packet_1.size();
 

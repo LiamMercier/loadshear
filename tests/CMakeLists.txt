@@ -4,6 +4,7 @@ add_executable(unit-tests
     payload-manager-tests.cpp
     shard-tests.cpp
     orchestrator-tests.cpp
+    interpreter-tests.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
@@ -14,6 +15,7 @@ target_link_libraries(unit-tests PRIVATE
     transports
     packets
     orchestrator
+    interpreter
 )
 
 include(GoogleTest)

@@ -1,0 +1,16 @@
+// comment
+
+ // typing ORCHESTRATOR here should not get picked up. None of it should.
+    // ORCHESTRATOR2 ORCHESTRATOR 2
+
+SETTINGS my_settings {
+    ENDPOINTS = {
+        "localhost",
+        127.0.0.1
+    }
+    SHARDS = 4
+}
+
+ORCHESTRATOR my_settings {
+    CREATE 100
+}
