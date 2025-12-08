@@ -328,8 +328,10 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
     EXPECT_EQ(server.lifetime_connections_,
               NUM_SESSIONS) << "Server did not accept all connections. "
                             << "You may be hitting OS limits, or the server "
-                            << "may not have enough connector backlog for this burst."
-                            << "Try setting ulimit to something large, i.e ulimit -n 16000";
+                            << "may not have enough connector backlog for this burst, "
+                            << "or your CPU may not be processing connection callbacks before "
+                            << "the drain call. You can try setting ulimit to"
+                            << "something large, i.e ulimit -n 16000";
 
     EXPECT_EQ(server.lifetime_received_,
               packet_size
