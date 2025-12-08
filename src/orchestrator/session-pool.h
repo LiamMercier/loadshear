@@ -176,6 +176,7 @@ public:
 
 private:
 
+    // TODO: perhaps send back analytics here? But, if we want live analytics, need something else.
     void disconnect_callback()
     {
         active_sessions_ -= 1;

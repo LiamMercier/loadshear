@@ -285,7 +285,7 @@ void TCPSession::do_write()
 
             if (!valid_payload)
             {
-                if (config_.loop_payloads)
+                if (config_.loop_payloads && !draining_)
                 {
                     next_payload_index_ = 0;
                     do_write();
