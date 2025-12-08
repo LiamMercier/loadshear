@@ -30,7 +30,11 @@ class SessionPool
     static_assert(std::is_invocable_v<decltype(&Session::send),
                                       Session &,
                                       size_t>,
-                  "Session is missing flood()");
+                  "Session is missing send()");
+
+    static_assert(std::is_invocable_v<decltype(&Session::drain),
+                                      Session &>,
+                  "Session is missing drain()");
 
     static_assert(std::is_invocable_v<decltype(&Session::stop),
                                       Session &>,
@@ -81,22 +85,88 @@ public:
 
     }
 
-    void start_all_sessions(const Session::Endpoints & endpoints)
+    // call start on index values [start, end)
+    void start_sessions_range(const Session::Endpoints & endpoints,
+                              size_t start,
+                              size_t end)
     {
-        for (size_t i = 0; i < sessions_.size(); i++)
+        if (closed_)
+        {
+            return;
+        }
+
+        active_sessions_ += end - start;
+
+        for (size_t i = start; i < end; i++)
         {
             sessions_[i]->start(endpoints);
         }
+    }
 
-        active_sessions_ = sessions_.size();
+    // call send on index values [start, end)
+    void send_sessions_range(size_t start, size_t end, size_t N)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->send(N);
+        }
+    }
+
+    // call flood on index values [start, end)
+    void flood_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->flood();
+        }
+    }
+
+    // call drain on index values [start, end)
+    void drain_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->drain();
+        }
+    }
+
+    // call stop on index values [start, end)
+    void stop_sessions_range(size_t start, size_t end)
+    {
+        if (closed_)
+        {
+            return;
+        }
+
+        for (size_t i = start; i < end; i++)
+        {
+            sessions_[i]->stop();
+        }
+    }
+
+    void start_all_sessions(const Session::Endpoints & endpoints)
+    {
+        start_sessions_range(0, sessions_.size());
     }
 
     void stop_all_sessions()
     {
-        for (size_t i = 0; i < sessions_.size(); i++)
-        {
-            sessions_[i]->stop();
-        }
+        stop_sessions_range(0, sessions_.size());
     }
 
     size_t active_sessions() const
@@ -106,6 +176,7 @@ public:
 
 private:
 
+    // TODO: perhaps send back analytics here? But, if we want live analytics, need something else.
     void disconnect_callback()
     {
         active_sessions_ -= 1;
@@ -118,8 +189,8 @@ private:
             bool expected = false;
             if(closed_.compare_exchange_strong(expected, true))
             {
-                // TODO: post callback to controlling class.
                 notify_closed_();
+                return;
             }
 
 

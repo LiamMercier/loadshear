@@ -52,7 +52,7 @@ void TCPSession::flood()
         // If we are already flooding, don't try to open two flood loops.
         //
         // See the discussion above do_flood() for why.
-        if (self->flood_)
+        if (self->flood_ || self->draining_)
         {
             return;
         }
@@ -77,6 +77,20 @@ void TCPSession::send(size_t N)
         if (self->live_ && !self->connecting_)
         {
             self->try_start_write();
+        }
+    });
+}
+
+void TCPSession::drain()
+{
+    asio::post(strand_, [self = shared_from_this()]{
+        self->draining_ = true;
+
+        if (!self->writing_
+            && self->writes_queued_ == 0
+            && self->responses_.empty())
+        {
+            self->close_session();
         }
     });
 }
@@ -213,6 +227,11 @@ void TCPSession::try_start_write()
     {
         do_write();
     }
+    // Handle draining but nothing queued.
+    else if (draining_)
+    {
+        close_session();
+    }
 }
 
 // There should only be one outstanding write per socket to maximize throughput. Why?
@@ -256,15 +275,17 @@ void TCPSession::do_write()
         // If flooding or writes are queued, write payloads.
         if (flood_ || writes_queued_ > 0)
         {
-            // If flood is enabled, we don't turn it off, overflow is meaningless.
-            writes_queued_--;
+            if (!flood_)
+            {
+                writes_queued_--;
+            }
 
             // Grab the payload from the payload manger.
             bool valid_payload = payload_manager_.fill_payload(next_payload_index_, current_payload_);
 
             if (!valid_payload)
             {
-                if (config_.loop_payloads)
+                if (config_.loop_payloads && !draining_)
                 {
                     next_payload_index_ = 0;
                     do_write();
@@ -273,6 +294,12 @@ void TCPSession::do_write()
 
                 // If not looping, stop writing, we are done.
                 writing_ = false;
+
+                if (draining_)
+                {
+                    close_session();
+                }
+
                 return;
             }
 
@@ -299,6 +326,11 @@ void TCPSession::do_write()
         {
             // We stopped writing, set to false.
             writing_ = false;
+
+            if (draining_)
+            {
+                close_session();
+            }
         }
 
         return;

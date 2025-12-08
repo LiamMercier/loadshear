@@ -13,11 +13,13 @@ public:
     TCPBroadcastServer(asio::io_context & cntx,
                        tcp::endpoint endpoint,
                        uint64_t broadcast_interval_ms,
-                       std::vector<uint8_t> bytes)
+                       std::vector<uint8_t> bytes,
+                       uint64_t num_packets)
     :cntx_(cntx),
     acceptor_(cntx, endpoint),
     timer_(cntx),
     broadcast_interval_ms_(broadcast_interval_ms),
+    total_heartbeats_to_send_(num_packets),
     send_bytes_(bytes)
     {
     }
@@ -87,6 +89,11 @@ private:
 
     void start_broadcast_timer()
     {
+        if (lifetime_heartbeats_ >= total_heartbeats_to_send_)
+        {
+            return;
+        }
+
         timer_.expires_after(std::chrono::milliseconds(broadcast_interval_ms_));
 
         timer_.async_wait([this](boost::system::error_code ec){
@@ -101,6 +108,8 @@ private:
     void broadcast_heartbeat()
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
+
+        lifetime_heartbeats_ += 1;
 
         for (auto it = clients_.begin(); it != clients_.end(); it++)
         {
@@ -131,6 +140,7 @@ public:
     std::atomic<size_t> lifetime_broadcasts_{0};
     std::atomic<size_t> lifetime_sent_{0};
     std::atomic<size_t> lifetime_received_{0};
+    std::atomic<size_t> lifetime_heartbeats_{0};
 
 private:
     asio::io_context & cntx_;
@@ -138,6 +148,7 @@ private:
     asio::steady_timer timer_;
 
     uint64_t broadcast_interval_ms_;
+    uint64_t total_heartbeats_to_send_;
 
     std::mutex clients_mutex_;
     std::unordered_set<std::shared_ptr<BasicSession>> clients_;

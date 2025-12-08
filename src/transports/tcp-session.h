@@ -67,6 +67,9 @@ public:
 
     void send(size_t N);
 
+    // Graceful exit.
+    void drain();
+
     void stop();
 
 private:
@@ -98,6 +101,9 @@ private:
     bool live_{false};
     bool connecting_{false};
     bool flood_{false};
+
+    // For graceful exits.
+    bool draining_{false};
 
     // Ensures we don't have two writers for non-flooding scenario
     bool writing_{false};
@@ -144,5 +150,5 @@ private:
     const PayloadManager & payload_manager_;
 
     //
-    const DisconnectCallback & on_disconnect_;
+    const DisconnectCallback on_disconnect_;
 };

@@ -20,14 +20,14 @@ struct alignas(COUNTER_ALIGNMENT) PayloadCounter
 // Operations allowed for the user.
 enum class PacketOperationType : uint8_t
 {
-    IDENTITY,
+    IDENTITY = 0,
     COUNTER,
     TIMESTAMP
 };
 
 enum class TimestampFormat : uint8_t
 {
-    Seconds,
+    Seconds = 0,
     Milliseconds,
     Microseconds,
     Nanoseconds
