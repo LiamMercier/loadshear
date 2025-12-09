@@ -1,6 +1,7 @@
 #include "interpreter.h"
 
 #include "lexer.h"
+#include "parser.h"
 
 #include <fstream>
 
@@ -74,7 +75,6 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
     Lexer lexer(std::move(script_raw));
     ParseResult lexer_res = lexer.tokenize(tokens_);
 
-    // TODO: check results, see if any tokens exist.
     if (!lexer_res.success)
     {
         return lexer_res;
@@ -84,16 +84,37 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
     {
         ParseResult error;
         error.success = false;
-        error.reason = "Tokenizer returned zero tokens! Your script might be empty?";
+        error.reason = "Lexer returned zero tokens! Your script might be empty?";
         return error;
     }
 
+    // TODO: remove this print
     for (const auto & t : tokens_)
     {
         std::cout << "[" << ttype_to_string(t.type)
                   << ", " << t.text
                   << ", " << t.line << ":" << t.col << "]\n";
     }
+
+    // Now we hand these tokens over to the parser.
+    Parser parser(tokens_);
+    DSLData unvalidated_script;
+
+    std::cout << "\nStarting parse on tokens!\n\n";
+
+    ParseResult parser_res = parser.parse(unvalidated_script);
+
+    script_ = std::move(unvalidated_script);
+
+    if (!parser_res.success)
+    {
+        return parser_res;
+    }
+
+    // TODO: check result has data.
+
+    // TODO: validate this before moving.
+    // script_ = std::move(unvalidated_script);
 
     return {1, ""};
 }

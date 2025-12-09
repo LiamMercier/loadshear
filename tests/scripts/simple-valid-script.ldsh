@@ -20,7 +20,7 @@ SETTINGS my_settings {
     READ = "true"
 
     // Enable repeating, session's will loop through the payloads.
-    REPEAT = "true"
+    REPEAT = "false"
 
     // Use these endpoints when starting the sessions.
     ENDPOINTS {

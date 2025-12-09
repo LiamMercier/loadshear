@@ -2,38 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <unordered_set>
 
 #include "token.h"
 #include "parse-result.h"
-
-constexpr std::string_view VALID_TOKEN_OPERATORS = "=,:";
-
-const std::unordered_set<std::string> VALID_KEYWORDS {
-    "SETTINGS",
-    "SESSION",
-    "HEADERSIZE",
-    "BODYMAX",
-    "READ",
-    "REPEAT",
-    "ENDPOINTS",
-    "SHARDS",
-    "PACKETS",
-    "HANDLER",
-    "ORCHESTRATOR",
-    "CREATE",
-    "CONNECT",
-    "SEND",
-    "FLOOD",
-    "DRAIN",
-    "DISCONNECT",
-    "OFFSET",
-    "COPIES",
-    "TIMESTAMP",
-    "COUNTER",
-    "FORMAT",
-    "TIMEOUT"
-};
 
 class Lexer
 {

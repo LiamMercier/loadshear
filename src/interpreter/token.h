@@ -1,6 +1,37 @@
 #pragma once
 
-enum class TokenType
+#include <cstdint>
+#include <unordered_set>
+
+constexpr std::string_view VALID_TOKEN_OPERATORS = "=,:";
+
+const std::unordered_set<std::string> VALID_KEYWORDS {
+    "SETTINGS",
+    "SESSION",
+    "HEADERSIZE",
+    "BODYMAX",
+    "READ",
+    "REPEAT",
+    "ENDPOINTS",
+    "SHARDS",
+    "PACKETS",
+    "HANDLER",
+    "ORCHESTRATOR",
+    "CREATE",
+    "CONNECT",
+    "SEND",
+    "FLOOD",
+    "DRAIN",
+    "DISCONNECT",
+    "OFFSET",
+    "COPIES",
+    "TIMESTAMP",
+    "COUNTER",
+    "FORMAT",
+    "TIMEOUT"
+};
+
+enum class TokenType : uint8_t
 {
     Keyword = 0,
     Identity,
@@ -10,7 +41,7 @@ enum class TokenType
     BraceClosed
 };
 
-// Debug utility to print type name.
+// Utility to print type name.
 inline std::string ttype_to_string(TokenType ttype)
 {
     switch (ttype)

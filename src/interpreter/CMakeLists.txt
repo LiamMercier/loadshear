@@ -1,4 +1,8 @@
-add_library(interpreter STATIC interpreter.cpp lexer.cpp)
+add_library(interpreter STATIC
+    interpreter.cpp
+    lexer.cpp
+    parser.cpp
+)
 
 # TODO: consider what we actually need
 target_include_directories(interpreter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
