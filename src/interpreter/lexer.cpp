@@ -155,7 +155,7 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
             {
                 char next_c = peek();
 
-                if (std::isdigit(static_cast<unsigned char>(next_c)) || next_c == '.')
+                if (std::isalnum(static_cast<unsigned char>(next_c)) || next_c == '.')
                 {
                     value.push_back(advance());
                 }

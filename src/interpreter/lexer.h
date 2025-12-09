@@ -9,13 +9,30 @@
 
 constexpr std::string_view VALID_TOKEN_OPERATORS = "=,:";
 
-// TODO: fill with keywords.
 const std::unordered_set<std::string> VALID_KEYWORDS {
     "SETTINGS",
+    "SESSION",
+    "HEADERSIZE",
+    "BODYMAX",
+    "READ",
+    "REPEAT",
     "ENDPOINTS",
     "SHARDS",
+    "PACKETS",
+    "HANDLER",
     "ORCHESTRATOR",
-    "CREATE"
+    "CREATE",
+    "CONNECT",
+    "SEND",
+    "FLOOD",
+    "DRAIN",
+    "DISCONNECT",
+    "OFFSET",
+    "COPIES",
+    "TIMESTAMP",
+    "COUNTER",
+    "FORMAT",
+    "TIMEOUT"
 };
 
 class Lexer

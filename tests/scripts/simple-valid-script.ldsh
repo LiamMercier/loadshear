@@ -1,16 +1,90 @@
-// comment
+// An example of a valid script
 
- // typing ORCHESTRATOR here should not get picked up. None of it should.
-    // ORCHESTRATOR2 ORCHESTRATOR 2
+// comments are done using two slashes and continue till the line ends
+
+// This comment should / still be entirely re/moved regardless of extra slahes //
+
+  // keywords like ORCHESTRATOR or other tokens should not be taken up by the lexer.
 
 SETTINGS my_settings {
-    ENDPOINTS = {
+    // Use TCP for the session type.
+    SESSION = "TCP"
+
+    // Set header size as 8 bytes.
+    HEADERSIZE = 8
+
+    // Set a max body size that the server can send us.
+    BODYMAX = 12288
+
+    // Enable reading the server's messages.
+    READ = "true"
+
+    // Enable repeating, session's will loop through the payloads.
+    REPEAT = "true"
+
+    // Use these endpoints when starting the sessions.
+    ENDPOINTS {
         "localhost",
         127.0.0.1
     }
+
+    // Create 4 shards instead of the application default of std::hardware_concurrency
     SHARDS = 4
+
+    // Define the packets that need to be read at startup.
+    PACKETS {
+        p1 : "test-packet-1.bin",
+        p2 : "test-packet-heavy.bin"
+    }
+
+    // Tell the application to look for a WASM module to handle server responses.
+    HANDLER = "test-module.wasm"
 }
 
+// my_settings holds the endpoints, the user does not need to list them for CONNECT calls
+//
+// Ranges are exclusive on the ending, so 0:50 translates to [0, 50)
+//
+// Each command can be given a timing offset from the previous command, scheduled relative
+// to when the command loop starts
+//
+// If no timing is given, a default is used.
+
+// Each SEND here is read into memory ahead of time when we construct the payload manager.
+//
+// During the orchestrator loop, SEND COPIES N just tells the session's they can write
+// the next 5 payloads from the payload manager.
 ORCHESTRATOR my_settings {
-    CREATE 100
+    // Create 100 session's as soon as we start the orchestrator.
+    CREATE 100 OFFSET 0ms
+    // Connect the first 50 session's 100ms after the last command.
+    CONNECT 0:50 OFFSET 100ms
+    //Connect the next 50 session's with application default time offset.
+    CONNECT 50:100
+
+    // Queue up 5 writes of test-packet-1.bin with bytes 0-7 replaced by a timestamp
+    // in little endian format representing seconds since unix epoch.
+    SEND 0:100 p1 COPIES 5 TIMESTAMP 0:8 FORMAT "little":"seconds" OFFSET 200ms
+
+    // Queue up 5 writes of test-packet-1.bin with bytes 0-7 replaced by a global counter
+    // with step size 1 in little endian format.
+    SEND 0:100 p1 COPIES 5 COUNTER 0:8 FORMAT "little":1 OFFSET 200ms
+
+    // Queue up 1 write of test-packet-1.bin as is.
+    SEND 0:100 p1 COPIES 1
+
+    // Tell each session to send all payloads from now on without waiting.
+    //
+    // If REPEAT is enabled, this will have the session repeat previous payloads.
+    //
+    // Most use cases for FLOOD can be handled by simply using SEND
+    FLOOD 0:100 OFFSET 100ms
+
+    // Send a DRAIN command to all session's with a 10000ms timeout, 500ms after the send was issued.
+    //
+    // If we do not drain in this time, the session's will have stop() called on them.
+    //
+    // Session's which have FLOOD called on them will continue to send until this loop of
+    // the payloads has been finished, but another loop will not be started even if enabled.
+    DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
 }
