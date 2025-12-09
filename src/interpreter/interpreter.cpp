@@ -111,7 +111,9 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
         return parser_res;
     }
 
-    // TODO: check result has data.
+    // TODO: set defaults for anything able to be defaulted
+
+    // TODO: check result has data for required fields.
 
     // TODO: validate this before moving.
     // script_ = std::move(unvalidated_script);
