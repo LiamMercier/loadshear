@@ -44,19 +44,12 @@ ParseResult Parser::parse(DSLData & script_data)
                                     + std::to_string(t.col)
                                     + "] (expected SETTINGS or ORCHESTRATOR)";
 
-            ParseResult res;
-            res.success = false;
-            res.reason = std::move(error_msg);
-            return res;
+            return arbitrary_error(std::move(error_msg));
         }
     }
 
     // If we get here, everything was parsed correctly.
-    ParseResult res;
-    res.success = true;
-    res.reason.clear();
-
-    return res;
+    return good_parse();
 }
 
 ParseResult Parser::parse_settings(SettingsBlock & settings)
@@ -241,27 +234,24 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
             else if (keyword.text == "HEADERSIZE")
             {
                 // Try to convert to integer, fail otherwise.
-                try
+
+                ParseResult int_res = try_convert_int(value_token,
+                                                      settings.header_size,
+                                                      "HEADERSIZE");
+                if (!int_res.success)
                 {
-                    settings.header_size = std::stoi(value_token.text);
-                }
-                catch (const std::exception & error)
-                {
-                    // Return error
-                    return bad_integer_error(value_token, "HEADERSIZE");
+                    return int_res;
                 }
             }
             else if (keyword.text == "BODYMAX")
             {
                 // Try to convert to integer, fail otherwise.
-                try
+                ParseResult int_res = try_convert_int(value_token,
+                                                      settings.body_max,
+                                                      "BODYMAX");
+                if (!int_res.success)
                 {
-                    settings.body_max = std::stoi(value_token.text);
-                }
-                catch (const std::exception & error)
-                {
-                    // Return error
-                    return bad_integer_error(value_token, "BODYMAX");
+                    return int_res;
                 }
             }
             else if (keyword.text == "READ")
@@ -297,14 +287,12 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
             else if (keyword.text == "SHARDS")
             {
                 // Try to convert to integer, fail otherwise.
-                try
+                ParseResult int_res = try_convert_int(value_token,
+                                                      settings.shards,
+                                                      "SHARDS");
+                if (!int_res.success)
                 {
-                    settings.shards = std::stoi(value_token.text);
-                }
-                catch (const std::exception & error)
-                {
-                    // Return error
-                    return bad_integer_error(value_token, "SHARDS");
+                    return int_res;
                 }
             }
             else if (keyword.text == "HANDLER")
@@ -327,11 +315,7 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
 
     consume();
 
-    ParseResult res;
-    res.success = true;
-    res.reason.clear();
-
-    return res;
+    return good_parse();
 }
 
 // TODO: parse orchestrator grammar.
@@ -399,8 +383,89 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
                 return range_res;
             }
 
-            // TODO: optionals
+            // Now, we expect the identity of the packet.
+            if (!is_expected(TokenType::Identity))
+            {
+                Token temp = peek();
+                return bad_type_error(temp, TokenType::Identity);
+            }
 
+            Token packet_id = consume();
+
+            // We expect COPIES next.
+            if (!is_expected(TokenType::Keyword))
+            {
+                Token temp = peek();
+                return bad_type_error(temp, TokenType::Keyword);
+            }
+            else if (peek().text != "COPIES")
+            {
+                Token temp = peek();
+                return missing_copies_error(temp);
+            }
+
+            // Consume COPIES
+            consume();
+
+            // We expect a valid integer Value now.
+            if (!is_expected(TokenType::Value))
+            {
+                Token temp = peek();
+                return bad_type_error(temp, TokenType::Value);
+            }
+
+            Token copies_value = consume();
+
+            // Try to turn this into a valid integer.
+            ParseResult int_res = try_convert_int(copies_value,
+                                                  action.count,
+                                                  "COPIES");
+            if (!int_res.success)
+            {
+                return int_res;
+            }
+
+            // Now, handle optional fields.
+
+            // If we hit an OFFSET keyword or a closing brace, stop looking for modifications.
+            while (peek().text != "OFFSET"
+                   && is_expected(TokenType::Keyword))
+            {
+                // Deal with COUNTER
+                if (peek().text == "COUNTER")
+                {
+                    consume();
+
+                    // Try to parse SEND options specialized on
+                    // the ModificationType we pass.
+                    ParseResult res = try_parse_send_option<ModificationType::Counter>(action);
+
+                    if (!res.success)
+                    {
+                        return res;
+                    }
+                }
+                // Deal with TIMESTAMP
+                else if (peek().text == "TIMESTAMP")
+                {
+                    consume();
+
+                    ParseResult res = try_parse_send_option<ModificationType::Timestamp>(action);
+
+                    if (!res.success)
+                    {
+                        return res;
+                    }
+                }
+                // Handle no OFFSET but also no further modifications.
+                else
+                {
+                    break;
+                }
+            }
+
+            // Anything else is an OFFSET, a closing brace, or a bad token
+            // we will fail on later. Continue as normal.
         }
         else if (t_action.text == "CONNECT")
         {
@@ -466,6 +531,11 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
 
                 // All fields for drain are done besides OFFSET done at the end of this block.
             }
+            // Otherwise, set to default if nothing was specified.
+            else
+            {
+                action.timeout_ms = DEFAULT_TIMEOUT_MS;
+            }
 
         }
         else if (t_action.text == "DISCONNECT")
@@ -487,17 +557,16 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             action.type = ActionType::CREATE;
 
             // Try to convert to integer, fail otherwise.
-            try
+            ParseResult int_res = try_convert_int(first_val,
+                                                  action.count,
+                                                  "CREATE");
+            if (!int_res.success)
             {
-                action.count = std::stoi(first_val.text);
-                action.range.start = 0;
-                action.range.end = action.count;
+                return int_res;
             }
-            catch (const std::exception & error)
-            {
-                // Return error
-                return bad_integer_error(first_val, "CREATE");
-            }
+
+            action.range.start = 0;
+            action.range.length = action.count;
         }
         else
         {
@@ -506,13 +575,51 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             return bad_action_error(temp);
         }
 
-        // Finally, check for an offset block.
-        // TODO:
+        // Finally, check for an offset block and set default if none is found.
+        if (peek().text == "OFFSET")
+        {
+            // Eat the OFFSET
+            consume();
 
+            // We expect a time convertible Value token.
+            if (!is_expected(TokenType::Value))
+            {
+                Token temp = peek();
+                return bad_type_error(temp, TokenType::Value);
+            }
 
+            // Save the timeout value.
+            Token timeout_token = consume();
+
+            ParseResult time_res = try_parse_time(timeout_token, action.offset_ms);
+
+            // Give error if we could not convert.
+            if (!time_res.success)
+            {
+                return time_res;
+            }
+
+            // Otherwise, we have stored the offset and should move on.
+        }
+        else
+        {
+            action.offset_ms = DEFAULT_OFFSET_MS;
+        }
+
+        // Push back this action and restart the loop.
+        orchestrator.actions.push_back(std::move(action));
     }
 
-    return {0, "parse_orchestrator has not been implemented."};
+    // After we exit the loop, we expect that there was a closing brace.
+    if (!is_expected(TokenType::BraceClosed))
+    {
+        Token temp = peek();
+        return bad_type_error(temp, TokenType::BraceClosed);
+    }
+
+    consume();
+
+    return good_parse();
 }
 
 bool Parser::end_of_tokens()
@@ -552,6 +659,30 @@ bool Parser::is_expected(TokenType expected)
     return (peek().type == expected);
 }
 
+ParseResult Parser::try_convert_int(const Token & t,
+                                    uint32_t & res,
+                                    const std::string & keyword)
+{
+    try
+    {
+        int pos = std::stoi(t.text);
+
+        if (pos < 0)
+        {
+            return negative_integer_error(t);
+        }
+
+        res = pos;
+    }
+    catch (const std::exception & error)
+    {
+        // Return error
+        return bad_integer_error(t, keyword);
+    }
+
+    return good_parse();
+}
+
 ParseResult Parser::try_parse_range(const Token & first_value,
                                     Range & range,
                                     const std::string & keyword)
@@ -575,31 +706,21 @@ ParseResult Parser::try_parse_range(const Token & first_value,
     // Save this value and then try to convert.
     Token second_val = consume();
 
-    try
+    ParseResult first_res = try_convert_int(first_value, range.start, keyword);
+
+    if (!first_res.success)
     {
-        range.start = std::stoi(first_value.text);
-    }
-    catch (const std::exception & error)
-    {
-        // Return error
-        return bad_integer_error(first_value, keyword);
+        return first_res;
     }
 
-    try
+    ParseResult second_res = try_convert_int(second_val, range.length, keyword);
+
+    if (!second_res.success)
     {
-        range.end = std::stoi(second_val.text);
-    }
-    catch (const std::exception & error)
-    {
-        // Return error
-        return bad_integer_error(second_val, keyword);
+        return second_res;
     }
 
-    ParseResult res;
-    res.success = true;
-    res.reason.clear();
-
-    return res;
+    return good_parse();
 }
 
 ParseResult Parser::try_parse_time(const Token & time_token,
@@ -633,7 +754,14 @@ ParseResult Parser::try_parse_time(const Token & time_token,
         }
 
         // Now, try to convert, or this is a bad value.
-        time_ms = (std::stoi(time_int) * mul);
+        int pos = std::stoi(time_int);
+
+        if (pos < 0)
+        {
+            return negative_integer_error(time_token);
+        }
+
+        time_ms = (pos * mul);
     }
     catch (const std::exception & error)
     {
@@ -641,11 +769,7 @@ ParseResult Parser::try_parse_time(const Token & time_token,
         return bad_time_error(time_token);
     }
 
-    ParseResult res;
-    res.success = true;
-    res.reason.clear();
-
-    return res;
+    return good_parse();
 }
 
 ParseResult Parser::arbitrary_error(std::string reason)
@@ -721,6 +845,21 @@ ParseResult Parser::bad_integer_error(Token t, std::string keyword)
     return arbitrary_error(error_msg);
 }
 
+ParseResult Parser::negative_integer_error(Token t)
+{
+    std::string error_msg = "Unexpected token "
+                            + t.text
+                            + " of type "
+                            + ttype_to_string(t.type)
+                            + " at [line "
+                            + std::to_string(t.line)
+                            + " column "
+                            + std::to_string(t.col)
+                            + "] (expected a positive integer)";
+
+    return arbitrary_error(error_msg);
+}
+
 ParseResult Parser::bad_time_error(Token t)
 {
     std::string error_msg = "Unexpected token "
@@ -732,6 +871,22 @@ ParseResult Parser::bad_time_error(Token t)
                             + " column "
                             + std::to_string(t.col)
                             + "] (expected a valid time value, i.e 1ms, 1s)";
+
+    return arbitrary_error(error_msg);
+}
+
+ParseResult Parser::bad_time_format(Token t)
+{
+    std::string error_msg = "Unexpected token "
+                            + t.text
+                            + " of type "
+                            + ttype_to_string(t.type)
+                            + " at [line "
+                            + std::to_string(t.line)
+                            + " column "
+                            + std::to_string(t.col)
+                            + "] (expected a valid time format, "
+                            + "i.e seconds, milliseconds, microseconds, nanoseconds)";
 
     return arbitrary_error(error_msg);
 }
@@ -751,6 +906,21 @@ ParseResult Parser::bad_bool_error(Token t)
     return arbitrary_error(error_msg);
 }
 
+ParseResult Parser::bad_endian_error(Token t)
+{
+    std::string error_msg = "Unexpected token "
+                            + t.text
+                            + " of type "
+                            + ttype_to_string(t.type)
+                            + " at [line "
+                            + std::to_string(t.line)
+                            + " column "
+                            + std::to_string(t.col)
+                            + "] (expected little or big for endian field)";
+
+    return arbitrary_error(error_msg);
+}
+
 ParseResult Parser::bad_nesting_error(Token t)
 {
     std::string error_msg = "Unexpected token "
@@ -762,6 +932,21 @@ ParseResult Parser::bad_nesting_error(Token t)
                             + " column "
                             + std::to_string(t.col)
                             + "] (unexpected nesting)";
+
+    return arbitrary_error(error_msg);
+}
+
+ParseResult Parser::missing_copies_error(Token t)
+{
+    std::string error_msg = "Unexpected token "
+                            + t.text
+                            + " of type "
+                            + ttype_to_string(t.type)
+                            + " at [line "
+                            + std::to_string(t.line)
+                            + " column "
+                            + std::to_string(t.col)
+                            + "] (expected COPIES instead)";
 
     return arbitrary_error(error_msg);
 }
@@ -779,4 +964,13 @@ ParseResult Parser::unterminated_error(Token t)
                             + "] (expected nesting terminator } instead)";
 
     return arbitrary_error(error_msg);
+}
+
+ParseResult Parser::good_parse()
+{
+    ParseResult res;
+    res.success = true;
+    res.reason.clear();
+
+    return res;
 }

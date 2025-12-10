@@ -2,6 +2,8 @@
 
 #include "test-helpers.h"
 
+#include "lexer.h"
+#include "parser.h"
 #include "interpreter.h"
 
 TEST(InterpreterTests, SimpleValidScript)
@@ -13,7 +15,7 @@ TEST(InterpreterTests, SimpleValidScript)
 
     {
         auto & settings = correct_data.settings;
-        auto & ochestrator = correct_data.orchestrator;
+        auto & orchestrator = correct_data.orchestrator;
 
         // Fill the settings.
         settings.identifier = "my_settings";
@@ -33,8 +35,169 @@ TEST(InterpreterTests, SimpleValidScript)
         settings.packet_identifiers["p2"] = "test-packet-heavy.bin";
 
         // Fill the orchestrator
-        // TODO: later
-        ochestrator.settings_identifier = "my_settings";
+        orchestrator.settings_identifier = "my_settings";
+
+        // We know what these actions should be from the script.
+
+        // CREATE 100 OFFSET 0ms
+        {
+            Action action_create;
+
+            action_create.type = ActionType::CREATE;
+            action_create.range = {0, 100};
+            action_create.count = 100;
+            action_create.offset_ms = 0;
+
+            orchestrator.actions.push_back(action_create);
+        }
+
+        // CONNECT 0:50 OFFSET 100ms
+        {
+            Action action_connect;
+
+            action_connect.type = ActionType::CONNECT;
+            action_connect.range = {0, 50};
+            action_connect.count = 50;
+            action_connect.offset_ms = 100;
+
+            orchestrator.actions.push_back(action_connect);
+        }
+
+        // CONNECT 50:100
+        {
+            Action action_connect;
+
+            action_connect.type = ActionType::CONNECT;
+            action_connect.range = {50, 100};
+            action_connect.count = 50;
+            action_connect.offset_ms = Parser::DEFAULT_OFFSET_MS;
+
+            orchestrator.actions.push_back(action_connect);
+        }
+
+        // SEND 0:100 p1 COPIES 5 TIMESTAMP 0:8 "little":"seconds" OFFSET 200ms
+        {
+            Action action_send;
+
+            action_send.type = ActionType::SEND;
+            action_send.range = {0, 100};
+            action_send.packet_identifier = "p1";
+            action_send.count = 5;
+
+            TimestampModification time_mod;
+
+            time_mod.timestamp_bytes = {0, 8};
+            time_mod.little_endian = true;
+            time_mod.format_name = "seconds";
+
+            action_send.push_modifier(time_mod);
+
+            action_send.offset_ms = 200;
+
+            orchestrator.actions.push_back(action_send);
+        }
+
+        // SEND 0:100 p1 COPIES 5 COUNTER 0:8 "little":1 OFFSET 200ms
+        {
+            Action action_send;
+
+            action_send.type = ActionType::SEND;
+            action_send.range = {0, 100};
+            action_send.packet_identifier = "p1";
+            action_send.count = 5;
+
+            CounterModification counter_mod;
+
+            counter_mod.counter_bytes = {0, 8};
+            counter_mod.little_endian = true;
+            counter_mod.counter_step = 1;
+
+            action_send.push_modifier(counter_mod);
+
+            action_send.offset_ms = 200;
+
+            orchestrator.actions.push_back(action_send);
+        }
+
+        // SEND 0:100 p1 COPIES 1
+        {
+            Action action_send;
+
+            action_send.type = ActionType::SEND;
+            action_send.range = {0, 100};
+            action_send.packet_identifier = "p1";
+            action_send.count = 1;
+
+            action_send.offset_ms = Parser::DEFAULT_OFFSET_MS;
+
+            orchestrator.actions.push_back(action_send);
+        }
+
+        // SEND 0:100 p2 COPIES 1 COUNTER 0:8 "little":7
+        //      TIMESTAMP 12:8 "big":"milliseconds" OFFSET 200ms
+        {
+            Action action_send;
+
+            action_send.type = ActionType::SEND;
+            action_send.range = {0, 100};
+            action_send.packet_identifier = "p2";
+            action_send.count = 1;
+
+            CounterModification counter_mod;
+
+            counter_mod.counter_bytes = {0, 8};
+            counter_mod.little_endian = true;
+            counter_mod.counter_step = 7;
+
+            action_send.push_modifier(counter_mod);
+
+            TimestampModification time_mod;
+
+            time_mod.timestamp_bytes = {12, 8};
+            time_mod.little_endian = false;
+            time_mod.format_name = "milliseconds";
+
+            action_send.push_modifier(time_mod);
+
+            action_send.offset_ms = 200;
+
+            orchestrator.actions.push_back(action_send);
+        }
+
+        // FLOOD 0:100 OFFSET 100ms
+        {
+            Action action_flood;
+
+            action_flood.type = ActionType::FLOOD;
+            action_flood.range = {0, 100};
+            action_flood.offset_ms = 100;
+
+            orchestrator.actions.push_back(action_flood);
+        }
+
+        // DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
+        {
+            Action action_drain;
+
+            action_drain.type = ActionType::DRAIN;
+            action_drain.range = {0, 100};
+            action_drain.offset_ms = 500;
+
+            action_drain.timeout_ms = 10000;
+
+            orchestrator.actions.push_back(action_drain);
+        }
+
+        // DISCONNECT 0:100 OFFSET 15s
+        {
+            Action action_disconnect;
+
+            action_disconnect.type = ActionType::DISCONNECT;
+            action_disconnect.range = {0, 100};
+            action_disconnect.offset_ms = 15000;
+
+            orchestrator.actions.push_back(action_disconnect);
+        }
     }
 
     Interpreter interpreter;

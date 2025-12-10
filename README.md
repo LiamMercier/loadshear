@@ -8,6 +8,8 @@ TODO: about
 
 TODO: table of contents
 
+TODO: split this readme into Users and Developers for ease of navigation
+
 ## Compiling
 
 Download build tools and libraries

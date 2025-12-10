@@ -92,6 +92,41 @@ inline void EXPECT_VECTOR_EQ(const std::vector<uint8_t> & expected,
                   << hexdump(actual);
 }
 
+inline std::string action_type_to_string(ActionType a)
+{
+    switch (a)
+    {
+        case ActionType::CREATE:
+        {
+            return "CREATE";
+        }
+        case ActionType::CONNECT:
+        {
+            return "CONNECT";
+        }
+        case ActionType::SEND:
+        {
+            return "SEND";
+        }
+        case ActionType::FLOOD:
+        {
+            return "FLOOD";
+        }
+        case ActionType::DRAIN:
+        {
+            return "DRAIN";
+        }
+        case ActionType::DISCONNECT:
+        {
+            return "DISCONNECT";
+        }
+        default:
+        {
+            return "Error";
+        }
+    }
+}
+
 inline std::string dump_DSL_data(const DSLData & data)
 {
     std::ostringstream data_str;
@@ -113,31 +148,172 @@ inline std::string dump_DSL_data(const DSLData & data)
 
     for (const auto & mapping : data.settings.packet_identifiers)
     {
-        packet_ids += "{ ";
+        packet_ids += " {";
         packet_ids += mapping.first;
         packet_ids += "->";
         packet_ids += mapping.second;
-        packet_ids += " }";
+        packet_ids += "} ";
     }
 
     packet_ids += "]";
 
-    // TODO: add orchestrator block printing.
+    std::string data_actions;
 
-    data_str << "{"
+    data_actions += "{ ";
+
+    // Gather actions list
+    for (const auto & action : data.orchestrator.actions)
+    {
+        data_actions += "{ ";
+        data_actions += "Type: ";
+        data_actions += action_type_to_string(action.type);
+        data_actions += " count: ";
+        data_actions += std::to_string(+action.count);
+        data_actions += " range: {";
+        data_actions += std::to_string(+action.range.start);
+        data_actions += " ";
+        data_actions += std::to_string(+action.range.length);
+        data_actions += "} offset: ";
+        data_actions += std::to_string(+action.offset_ms);
+        data_actions += " ";
+
+        if (action.type == ActionType::SEND)
+        {
+            data_actions += "packet_id: ";
+            data_actions += action.packet_identifier;
+
+            data_actions += " timestamps: [";
+
+            std::string time_modstring;
+            for (const auto & time_mod : action.timestamp_mods)
+            {
+                time_modstring += " {";
+                time_modstring += std::to_string(+time_mod.timestamp_bytes.start);
+                time_modstring += " ";
+                time_modstring += std::to_string(+time_mod.timestamp_bytes.length);
+                time_modstring += "} ";
+            }
+
+            data_actions += time_modstring;
+            data_actions += "] ";
+
+            data_actions += " counters: [";
+
+            std::string counter_modstring;
+            for (const auto & counter_mod : action.counter_mods)
+            {
+                counter_modstring += " {";
+                counter_modstring += std::to_string(+counter_mod.counter_bytes.start);
+                counter_modstring += " ";
+                counter_modstring += std::to_string(+counter_mod.counter_bytes.length);
+                counter_modstring += "} ";
+            }
+
+            data_actions += counter_modstring;
+            data_actions += "] ";
+
+            data_actions += " order: [ ";
+
+            for (const auto & i : action.mod_order)
+            {
+                data_actions += std::to_string(+static_cast<uint8_t>(i));
+                data_actions += " ";
+            }
+
+            data_actions += "] \n";
+        }
+
+        if (action.type == ActionType::DRAIN)
+        {
+            data_actions += "drain timeout: ";
+            data_actions += std::to_string(+action.timeout_ms);
+        }
+
+        data_actions += "} ";
+
+    }
+
+    data_str << "SETTINGS : {\n"
              << "id: " << data.settings.identifier << " "
-             << "SESSION: " << data.settings.session_protocol << " "
-             << "HEADERSIZE: " << data.settings.header_size << " "
+             << "SESSION: " << data.settings.session_protocol << "\n"
+             << "HEADERSIZE: " << data.settings.header_size << "\n"
              << "BODYMAX: " << data.settings.body_max << " "
              << "READ: " << data.settings.read << " "
-             << "REPEAT: " << data.settings.repeat << " "
+             << "REPEAT: " << data.settings.repeat << "\n"
              << "SHARDS: " << data.settings.shards << " "
              << "HANDLER: " << data.settings.handler_value << " "
-             << "ENDPOINTS: " << endpoints_list << " "
+             << "ENDPOINTS: " << endpoints_list << "\n"
              << "PACKETS: " << packet_ids
-             << "}";
+             << "\n} \n"
+             << "ORCHESTRATOR : {\n"
+             << "id: " << data.orchestrator.settings_identifier << " "
+             << "Actions: [" << data_actions << "] "
+             << " \n}";
 
     return data_str.str();
+}
+
+inline bool actions_equal(Action a, Action b)
+{
+    // Go through the action fields and compare.
+    if (a.type != b.type)
+    {
+        return false;
+    }
+    else if (a.range.start != b.range.start
+            || a.range.length != b.range.length)
+    {
+        return false;
+    }
+    else if (a.offset_ms != b.offset_ms)
+    {
+        return false;
+    }
+
+    // Check count if relevant.
+    if (a.type == ActionType::CREATE
+        || a.type == ActionType::SEND
+        || a.type == ActionType::DRAIN)
+    {
+        if (a.count != b.count)
+        {
+            return false;
+        }
+    }
+
+    if (a.type == ActionType::SEND)
+    {
+        if (a.packet_identifier != b.packet_identifier)
+        {
+            return false;
+        }
+
+        // Compare vectors.
+        if (a.timestamp_mods != b.timestamp_mods)
+        {
+            return false;
+        }
+
+        if (a.counter_mods != b.counter_mods)
+        {
+            return false;
+        }
+
+        if (a.mod_order != b.mod_order)
+        {
+            return false;
+        }
+    }
+
+    if (a.type == ActionType::DRAIN)
+    {
+        if (a.timeout_ms != b.timeout_ms)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 inline void EXPECT_DSL_EQ(const DSLData & expected,
@@ -211,7 +387,30 @@ inline void EXPECT_DSL_EQ(const DSLData & expected,
         }
     }
 
-    // TODO: compare the orchestrator fields.
+    // Compare the orchestrator fields.
+    if (expected.orchestrator.settings_identifier
+        != actual.orchestrator.settings_identifier)
+    {
+        fail = true;
+    }
+
+    if (expected.orchestrator.actions.size()
+        != actual.orchestrator.actions.size())
+    {
+        fail = true;
+    }
+    else
+    {
+        for (size_t i = 0; i < expected.orchestrator.actions.size(); i++)
+        {
+            if (!actions_equal(expected.orchestrator.actions[i],
+                               actual.orchestrator.actions[i]))
+            {
+                fail = true;
+                break;
+            }
+        }
+    }
 
     if (fail)
     {
