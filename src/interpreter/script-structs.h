@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "action-descriptor.h"
 
@@ -70,11 +71,6 @@ struct Action
     // Keep track of the order we pushed these in.
     std::vector<ModificationType> mod_order;
 
-    //
-    // DRAIN specific
-    //
-    uint32_t timeout_ms;
-
     // To push back a modifier
     template <typename T>
     void push_modifier(T & mod)
@@ -101,6 +97,11 @@ struct Action
 
 };
 
+// TODO <feature>: Update this when more transports are available.
+const std::unordered_set<std::string> VALID_PROTOCOLS {
+    "TCP"
+};
+
 struct SettingsBlock
 {
     std::string identifier;
@@ -108,8 +109,8 @@ struct SettingsBlock
 
     uint32_t header_size;
     uint32_t body_max;
-    bool read;
-    bool repeat;
+    bool read{false};
+    bool repeat{false};
 
     uint32_t shards;
 

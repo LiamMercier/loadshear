@@ -223,12 +223,6 @@ inline std::string dump_DSL_data(const DSLData & data)
             data_actions += "] \n";
         }
 
-        if (action.type == ActionType::DRAIN)
-        {
-            data_actions += "drain timeout: ";
-            data_actions += std::to_string(+action.timeout_ms);
-        }
-
         data_actions += "} ";
 
     }
@@ -300,14 +294,6 @@ inline bool actions_equal(Action a, Action b)
         }
 
         if (a.mod_order != b.mod_order)
-        {
-            return false;
-        }
-    }
-
-    if (a.type == ActionType::DRAIN)
-    {
-        if (a.timeout_ms != b.timeout_ms)
         {
             return false;
         }

@@ -4,6 +4,7 @@
 #include "parser.h"
 
 #include <fstream>
+#include <thread>
 
 // TODO: remove
 #include <iostream>
@@ -104,19 +105,83 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
 
     ParseResult parser_res = parser.parse(unvalidated_script);
 
-    script_ = std::move(unvalidated_script);
-
     if (!parser_res.success)
     {
         return parser_res;
     }
 
-    // TODO: set defaults for anything able to be defaulted
+    script_ = std::move(unvalidated_script);
+
+    set_script_defaults();
 
     // TODO: check result has data for required fields.
-
-    // TODO: validate this before moving.
-    // script_ = std::move(unvalidated_script);
+    ParseResult verification_res = verify_script();
 
     return {1, ""};
+}
+
+void Interpreter::set_script_defaults()
+{
+    // For each setting, we check if the current value is the data type maximum if it should be set.
+
+    // identifier, session_protocol, header_size, body_max, cannot be defaulted. read, repeat are
+    // already defaulted.
+
+    auto & settings = script_.settings;
+
+    // First, go over each option in the SETTING block.
+    if (settings.shards == UINT32_MAX)
+    {
+        int hw_conc = std::thread::hardware_concurrency();
+
+        // If we get no good value, and the user doesn't override, default to single threaded.
+        if (hw_conc <= 0)
+        {
+            hw_conc = 1;
+        }
+
+        settings.shards = hw_conc;
+    }
+
+    // If we have an empty handler_value, set it to "NOP" as a default.
+    if (settings.handler_value.empty())
+    {
+        settings.handler_value = "NOP";
+    }
+    
+    // We already default the orchestrator actions during parse since we validate the data is
+    // possibly correct (but not validated yet).
+}
+
+ParseResult Interpreter::verify_script()
+{
+    // TODO: verify the script is correct.
+    
+    // First, ensure each setting is in a valid state before we proceed.
+    auto & settings = script_.settings;
+
+    if (settings.identifier.empty())
+    {
+        // TODO: bad settings
+        return;
+    }
+    
+    // Ensure the session protocol is a valid protocol.
+    if (VALID_PROTOCOLS.find(settings.session_protocol) 
+        == VALID_PROTOCOLS.end())
+    {
+        // TODO: bad settings
+        return;
+    }
+
+    return good_parse();
+}
+
+ParseResult Interpreter::good_parse()
+{
+    ParseResult res;
+    res.success = true;
+    res.reason.clear();
+
+    return res;
 }

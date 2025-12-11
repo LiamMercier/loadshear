@@ -183,7 +183,7 @@ TEST(InterpreterTests, SimpleValidScript)
             action_drain.range = {0, 100};
             action_drain.offset_ms = 500;
 
-            action_drain.timeout_ms = 10000;
+            action_drain.count = 10000;
 
             orchestrator.actions.push_back(action_drain);
         }
@@ -210,3 +210,5 @@ TEST(InterpreterTests, SimpleValidScript)
                                 << result.reason;
 
 }
+
+// TODO: test we get the correct defaults after interpreter (need new skit).

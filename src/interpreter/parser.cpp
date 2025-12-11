@@ -392,6 +392,9 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
 
             Token packet_id = consume();
 
+            // Save this ID in the action.
+            action.packet_identifier = packet_id.text;
+
             // We expect COPIES next.
             if (!is_expected(TokenType::Keyword))
             {
@@ -521,7 +524,7 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
                 // Save the timeout value.
                 Token timeout_token = consume();
 
-                ParseResult time_res = try_parse_time(timeout_token, action.timeout_ms);
+                ParseResult time_res = try_parse_time(timeout_token, action.count);
 
                 // Check the result was good.
                 if (!time_res.success)
@@ -534,7 +537,7 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             // Otherwise, set to default if nothing was specified.
             else
             {
-                action.timeout_ms = DEFAULT_TIMEOUT_MS;
+                action.count = DEFAULT_TIMEOUT_MS;
             }
 
         }
@@ -735,17 +738,17 @@ ParseResult Parser::try_parse_time(const Token & time_token,
         uint32_t mul = 1;
         std::string time_int;
 
-        if (time_string.ends_with("s"))
+        if (time_string.ends_with("ms"))
+        {
+            // Remove the ms.
+            time_int = time_string.substr(0, time_string.size() - 1);
+        }
+        else if (time_string.ends_with("s"))
         {
             // 1 second = 1000 milliseconds.
             mul = 1000;
 
             // Remove the s.
-            time_int = time_string.substr(0, time_string.size() - 1);
-        }
-        else if (time_string.ends_with("ms"))
-        {
-            // Remove the ms.
             time_int = time_string.substr(0, time_string.size() - 1);
         }
         else
