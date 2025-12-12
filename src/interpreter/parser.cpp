@@ -318,7 +318,6 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
     return good_parse();
 }
 
-// TODO: parse orchestrator grammar.
 ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
 {
     // Eat the ORCHESTRATOR token
@@ -569,7 +568,7 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             }
 
             action.range.start = 0;
-            action.range.length = action.count;
+            action.range.second = action.count;
         }
         else
         {
@@ -716,7 +715,7 @@ ParseResult Parser::try_parse_range(const Token & first_value,
         return first_res;
     }
 
-    ParseResult second_res = try_convert_int(second_val, range.length, keyword);
+    ParseResult second_res = try_convert_int(second_val, range.second, keyword);
 
     if (!second_res.success)
     {

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <map>
 
 #include "parse-result.h"
 #include "token.h"
@@ -17,6 +18,16 @@ public:
     ParseResult verify_script();
 
 private:
+    ParseResult insert_mod_range(std::map<uint32_t, uint32_t> & map,
+                                 Range to_insert,
+                                 size_t action_id);
+
+    ParseResult arbitrary_error(std::string reason);
+
+    ParseResult bad_range_error(Range overlapped,
+                                Range violating_range,
+                                size_t action_id);
+
     ParseResult good_parse();
 
 public:

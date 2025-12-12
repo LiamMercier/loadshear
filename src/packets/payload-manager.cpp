@@ -13,7 +13,7 @@ counters_(payloads_.size())
         counters_[i].counter = 0;
 
         // Prevent OOB access.
-        if (i > counters_.size())
+        if (i > steps.size())
         {
             counters_[i].step = 1;
             std::cerr << "Warning! Counter steps was out of bounds!\n";

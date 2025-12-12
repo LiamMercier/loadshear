@@ -172,7 +172,7 @@ inline std::string dump_DSL_data(const DSLData & data)
         data_actions += " range: {";
         data_actions += std::to_string(+action.range.start);
         data_actions += " ";
-        data_actions += std::to_string(+action.range.length);
+        data_actions += std::to_string(+action.range.second);
         data_actions += "} offset: ";
         data_actions += std::to_string(+action.offset_ms);
         data_actions += " ";
@@ -190,7 +190,7 @@ inline std::string dump_DSL_data(const DSLData & data)
                 time_modstring += " {";
                 time_modstring += std::to_string(+time_mod.timestamp_bytes.start);
                 time_modstring += " ";
-                time_modstring += std::to_string(+time_mod.timestamp_bytes.length);
+                time_modstring += std::to_string(+time_mod.timestamp_bytes.second);
                 time_modstring += "} ";
             }
 
@@ -205,7 +205,7 @@ inline std::string dump_DSL_data(const DSLData & data)
                 counter_modstring += " {";
                 counter_modstring += std::to_string(+counter_mod.counter_bytes.start);
                 counter_modstring += " ";
-                counter_modstring += std::to_string(+counter_mod.counter_bytes.length);
+                counter_modstring += std::to_string(+counter_mod.counter_bytes.second);
                 counter_modstring += "} ";
             }
 
@@ -254,8 +254,7 @@ inline bool actions_equal(Action a, Action b)
     {
         return false;
     }
-    else if (a.range.start != b.range.start
-            || a.range.length != b.range.length)
+    else if (a.range != b.range)
     {
         return false;
     }

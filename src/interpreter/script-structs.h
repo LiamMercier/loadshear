@@ -11,14 +11,46 @@
 template<typename T>
 inline constexpr bool always_false{false};
 
+// TODO <feature>: Update this when more transports are available.
+const std::unordered_set<std::string> VALID_PROTOCOLS {
+    "TCP"
+};
+
+// Does not include user defined .wasm files.
+const std::unordered_set<std::string> VALID_MESSAGE_HANDLERS {
+    "NOP"
+};
+
+const std::unordered_set<std::string> VALID_TIME_FORMATS
+{
+    "seconds",
+    "milliseconds",
+    "microseconds",
+    "nanoseconds",
+};
+
 struct Range
 {
     uint32_t start;
-    uint32_t length;
+    // For Action, this is the end, for modifications, this is length.
+    uint32_t second;
+
+    // If we store start:length then this computes the end.
+    uint32_t end_from_length() const
+    {
+        // start + length
+        return start + second;
+    }
+
+    uint32_t size_from_end() const
+    {
+        // end - start
+        return second - start;
+    }
 
     bool operator==(const Range & other) const
     {
-        return ((start == other.start) && (length == other.length));
+        return ((start == other.start) && (second == other.second));
     }
 };
 
@@ -95,11 +127,6 @@ struct Action
         }
     }
 
-};
-
-// TODO <feature>: Update this when more transports are available.
-const std::unordered_set<std::string> VALID_PROTOCOLS {
-    "TCP"
 };
 
 struct SettingsBlock
