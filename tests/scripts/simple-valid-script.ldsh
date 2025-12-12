@@ -41,6 +41,16 @@ SETTINGS my_settings {
     // Define the packets that need to be read at startup.
     //
     // We define these using [Identifier] [Operator (:)] [Value]
+    //
+    // You can escape quotes with \" and $ with \$
+    //
+    // If --expand-env is passed as an argument, we automatically expand $
+    // and need escaping, otherwise escaping $ is not necessary.
+    //
+    // We automatically expand ~/ to the home directory, but we do not expand
+    // ~otheruser to otheruser's home directory. If you want to do this,
+    // you need to give a path yourself or use an environment variable
+    //  and ensure you can read the files.
     PACKETS {
         p1 : "test-packet-1.bin",
         p2 : "test-packet-heavy.bin"
@@ -54,15 +64,15 @@ SETTINGS my_settings {
 //
 // Ranges are exclusive on the ending, so 0:50 translates to [0, 50)
 //
-// Each command can be given a timing offset from the previous command, scheduled relative
-// to when the command loop starts
+// Each command can be given a timing offset from the previous command,
+// scheduled relative to when the command loop starts
 //
 // If no timing is given, a default is used (see parser.h for the values).
 
 // Each SEND here is read into memory ahead of time when we construct the payload manager.
 //
-// During the orchestrator loop, SEND COPIES N just tells the session's they can write
-// the next 5 payloads from the payload manager.
+// During the orchestrator loop, SEND COPIES N just tells the session's
+// they can write the next 5 payloads from the payload manager.
 ORCHESTRATOR my_settings {
     // Create 100 session's as soon as we start the orchestrator.
     CREATE 100 OFFSET 0ms
@@ -98,15 +108,19 @@ ORCHESTRATOR my_settings {
     // Most use cases for FLOOD can be handled by simply using SEND
     FLOOD 0:100 OFFSET 100ms
 
-    // Send a DRAIN command to all session's with a 10000ms timeout, 500ms after the send was issued.
+    // Send a DRAIN command to all session's with a 10000ms timeout,
+    // 500ms after the send was issued.
     //
-    // If we do not drain in this time, the session's will have stop() called on them.
+    // If we do not drain in this time, the session's will have
+    // stop() called on them.
     //
-    // Session's which have FLOOD called on them will continue to send until this loop of
-    // the payloads has been finished, but another loop will not be started.
+    // Session's which have FLOOD called on them will continue
+    // to send until this loop of the payloads has been finished,
+    // but another loop will not be started.
     DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
 
-    // Forcibly disconnect all sessions 15 seconds after DRAIN. This command is pointless
-    // here since the timeout will already do this, so it should be avoided in proper scripts.
+    // Forcibly disconnect all sessions 15 seconds after DRAIN.
+    // This command is pointless here since the timeout will already do this,
+    // so it should be avoided in most scripts.
     DISCONNECT 0:100 OFFSET 15s
 }
