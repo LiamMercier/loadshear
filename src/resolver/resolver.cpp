@@ -109,4 +109,18 @@ namespace Resolver
 
         return out_path;
     }
+
+    size_t get_file_size(fs::path file)
+    {
+        std::error_code ec;
+
+        auto size = fs::file_size(file, ec);
+
+        if (ec)
+        {
+            return 0;
+        }
+
+        return size;
+    }
 }

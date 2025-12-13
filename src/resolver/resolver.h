@@ -14,4 +14,6 @@ namespace Resolver
                           std::string & error_string);
 
     void set_global_resolve_options(ResolverOptions options);
+
+    size_t get_file_size(fs::path);
 }

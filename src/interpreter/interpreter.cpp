@@ -2,6 +2,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "resolver.h"
 
 #include <fstream>
 #include <thread>
@@ -117,6 +118,11 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
 
     ParseResult verification_res = verify_script();
 
+    if (!verification_res.success)
+    {
+        return verification_res;
+    }
+
     // Validator:
 
     return {1, ""};
@@ -213,9 +219,25 @@ ParseResult Interpreter::verify_script()
         return arbitrary_error(std::move(e_msg));
     }
 
-    // TODO: Check that we can resolve each packet.
+    // Check that we can resolve each packet.
+    for (const auto & packet_id : settings.packet_identifiers)
+    {
+        std::string error_string;
+        auto path = Resolver::resolve_file(packet_id.second,
+                                           error_string);
 
-    // "could not resolve packet identity <p_ident> corresponding to fs::path"
+        if (path.empty())
+        {
+            std::string e_msg = "SETTINGS block has unresolvable packet "
+                                + packet_id.first
+                                + " with identifier "
+                                + packet_id.second
+                                + " (got error: "
+                                + error_string
+                                + ")";
+            return arbitrary_error(std::move(e_msg));
+        }
+    }
 
     // Check that the MessageHandler selected is valid if read is enabled.
     if (settings.read && (VALID_MESSAGE_HANDLERS.find(settings.handler_value)
@@ -224,8 +246,20 @@ ParseResult Interpreter::verify_script()
         // If we have a .wasm file, see that we can resolve it.
         if (settings.handler_value.ends_with(".wasm"))
         {
-            // TODO: try to resolve the .wasm file.
-            // Assert file exists
+            std::string error_string;
+            auto path = Resolver::resolve_file(settings.handler_value,
+                                               error_string);
+
+            if (path.empty())
+            {
+                std::string e_msg = "SETTINGS block has message handler that "
+                                    + std::string("cannot be resolved (got error: ")
+                                    + error_string
+                                    + ")";
+                return arbitrary_error(std::move(e_msg));
+            }
+
+            // TODO: see if file is ok to use
         }
         // No .wasm file and no alternative message handler, abort since we can't read.
         else
@@ -377,10 +411,55 @@ ParseResult Interpreter::verify_script()
                                         + std::to_string(i)
                                         + "] has "
                                         + std::to_string(action.timestamp_mods.size()
-                                                         + action.counter_mods.size())
+                                                      + action.counter_mods.size())
                                         + " modifications but only "
                                         + std::to_string(action.mod_order.size())
                                         + " were accounted for.";
+                    return arbitrary_error(std::move(e_msg));
+                }
+
+                // Check the packet file exists and can be used.
+                std::string error_string;
+                auto iter = settings.packet_identifiers.find
+                                                (
+                                                    action.packet_identifier
+                                                );
+
+                if (iter == settings.packet_identifiers.end())
+                {
+                    std::string e_msg = "SEND [action "
+                                        + std::to_string(i)
+                                        + "] has no packet file for identity"
+                                        + action.packet_identifier;
+                    return arbitrary_error(std::move(e_msg));
+                }
+
+                auto packet_path = Resolver::resolve_file(iter->second,
+                                                          error_string);
+
+                if (packet_path.empty())
+                {
+                    std::string e_msg = "SEND [action "
+                                        + std::to_string(i)
+                                        + "] has unresolvable packet file "
+                                        + iter->second
+                                        + " corresponding to identity "
+                                        + action.packet_identifier
+                                        + " (got error: "
+                                        + error_string
+                                        + ")";
+                    return arbitrary_error(std::move(e_msg));
+                }
+
+                size_t packet_size = Resolver::get_file_size(packet_path);
+
+                if (packet_size == 0)
+                {
+                    std::string e_msg = "SEND [action "
+                                        + std::to_string(i)
+                                        + "] has packet at path "
+                                        + packet_path.string()
+                                        + "with zero bytes of data";
                     return arbitrary_error(std::move(e_msg));
                 }
 
@@ -416,13 +495,23 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = "SEND [action "
                                             + std::to_string(i)
-                                            + "] has timestamp of size "
+                                            + "] has TIMESTAMP of size "
                                             + std::to_string(time_mod.timestamp_bytes.second)
                                             + " (should be at most 8)";
                         return arbitrary_error(std::move(e_msg));
                     }
 
-                    // TODO: we need the packet size for bounds checking.
+                    // Check we do not exceed the payload bounds.
+                    if (time_mod.timestamp_bytes.end_from_length() > packet_size)
+                    {
+                        std::string e_msg = "SEND [action "
+                                            + std::to_string(i)
+                                            + "] has TIMESTAMP ending at index "
+                                            + std::to_string(time_mod.timestamp_bytes.end_from_length())
+                                            + " exceeding packet size "
+                                            + std::to_string(packet_size);
+                        return arbitrary_error(std::move(e_msg));
+                    }
                 }
 
                 for (const auto & counter_mod : action.counter_mods)
@@ -450,13 +539,23 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = "SEND [action "
                                             + std::to_string(i)
-                                            + "] has timestamp of size "
+                                            + "] has COUNTER of size "
                                             + std::to_string(counter_mod.counter_bytes.second)
                                             + " (should be at most 8)";
                         return arbitrary_error(std::move(e_msg));
                     }
 
-                    // TODO: we need the packet size.
+                    // Check we do not exceed the payload bounds.
+                    if (counter_mod.counter_bytes.end_from_length() > packet_size)
+                    {
+                        std::string e_msg = "SEND [action "
+                                            + std::to_string(i)
+                                            + "] has COUNTER ending at index "
+                                            + std::to_string(counter_mod.counter_bytes.end_from_length())
+                                            + " exceeding packet size "
+                                            + std::to_string(packet_size);
+                        return arbitrary_error(std::move(e_msg));
+                    }
                 }
 
                 // If not connected, stop now.

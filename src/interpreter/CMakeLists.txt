@@ -11,4 +11,5 @@ target_include_directories(interpreter PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(interpreter PRIVATE
     Boost::system
     orchestrator
+    resolver
 )

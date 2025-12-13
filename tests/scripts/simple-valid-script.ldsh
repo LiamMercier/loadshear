@@ -52,8 +52,8 @@ SETTINGS my_settings {
     // you need to give a path yourself or use an environment variable
     //  and ensure you can read the files.
     PACKETS {
-        p1 : "test-packet-1.bin",
-        p2 : "test-packet-heavy.bin"
+        p1 : "tests/packets/test-packet-1.bin",
+        p2 : "tests/packets/test-packet-heavy.bin"
     }
 
     // Tell the application to look for a WASM module file to handle server responses.

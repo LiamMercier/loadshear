@@ -31,8 +31,8 @@ TEST(InterpreterTests, SimpleValidScript)
         settings.handler_value = "test-module.wasm";
         settings.endpoints = {"localhost", "127.0.0.1"};
 
-        settings.packet_identifiers["p1"] = "test-packet-1.bin";
-        settings.packet_identifiers["p2"] = "test-packet-heavy.bin";
+        settings.packet_identifiers["p1"] = "tests/packets/test-packet-1.bin";
+        settings.packet_identifiers["p2"] = "tests/packets/test-packet-heavy.bin";
 
         // Fill the orchestrator
         orchestrator.settings_identifier = "my_settings";
