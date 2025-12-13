@@ -79,6 +79,7 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
                     advance();
                     value.push_back('"');
                 }
+                // TODO: escaped $ symbol.
                 else
                 {
                     value.push_back(next_c);
