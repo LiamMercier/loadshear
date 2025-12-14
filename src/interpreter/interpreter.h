@@ -11,7 +11,7 @@
 class Interpreter
 {
 public:
-    ParseResult parse_script(std::filesystem::path script_path);
+    ParseResult parse_script(std::string script_name);
 
     void set_script_defaults();
 

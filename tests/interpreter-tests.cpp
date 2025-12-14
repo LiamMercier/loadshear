@@ -8,7 +8,7 @@
 
 TEST(InterpreterTests, SimpleValidScript)
 {
-    std::filesystem::path script_file = "tests/scripts/simple-valid-script.ldsh";
+    std::string script_file = "tests/scripts/simple-valid-script.ldsh";
 
     // Create a known good set of data we expect from parsing this script.
     DSLData correct_data;
@@ -28,7 +28,7 @@ TEST(InterpreterTests, SimpleValidScript)
 
         settings.shards = 4;
 
-        settings.handler_value = "test-module.wasm";
+        settings.handler_value = "tests/modules/tcp-single-session-heartbeat.wasm";
         settings.endpoints = {"localhost", "127.0.0.1"};
 
         settings.packet_identifiers["p1"] = "tests/packets/test-packet-1.bin";
@@ -211,4 +211,32 @@ TEST(InterpreterTests, SimpleValidScript)
 
 }
 
-// TODO: test we get the correct defaults after interpreter (need new skit).
+TEST(InterpreterTests, BadCountersScript)
+{
+    std::string script_file = "tests/scripts/bad-counter-script.loadshear";
+
+    Interpreter interpreter;
+
+    ParseResult result = interpreter.parse_script(script_file);
+
+    EXPECT_FALSE(result.success) << "Parse result was successful for a known "
+                                 << "invalid script ("
+                                 << script_file
+                                 << ")";
+}
+
+TEST(InterpreterTests, BadPacketsBlock)
+{
+    std::string script_file = "tests/scripts/bad-packets-script.ldsh";
+
+    Interpreter interpreter;
+
+    ParseResult result = interpreter.parse_script(script_file);
+
+    std::cout << result.reason << "\n";
+
+    EXPECT_FALSE(!result.success) << "Parse result was successful for a known "
+                                 << "invalid script ("
+                                 << script_file
+                                 << ")";
+}

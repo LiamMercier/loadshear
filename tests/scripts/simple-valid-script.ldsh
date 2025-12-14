@@ -57,7 +57,7 @@ SETTINGS my_settings {
     }
 
     // Tell the application to look for a WASM module file to handle server responses.
-    HANDLER = "test-module.wasm"
+    HANDLER = "tests/modules/tcp-single-session-heartbeat.wasm"
 }
 
 // my_settings holds the endpoints, the user does not need to list them for CONNECT calls

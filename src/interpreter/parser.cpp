@@ -1,7 +1,5 @@
 #include "parser.h"
 
-#include <iostream>
-
 Parser::Parser(const std::vector<Token> & tokens)
 :input_tokens_(tokens)
 {
@@ -638,10 +636,6 @@ Token Parser::consume()
     }
 
     auto t = input_tokens_[token_pos_ - 1];
-    std::cerr << "Consuming "
-              << "[" << ttype_to_string(t.type)
-              << ", " << t.text
-              << ", " << t.line << ":" << t.col << "]\n";
 
     return input_tokens_[token_pos_ - 1];
 }

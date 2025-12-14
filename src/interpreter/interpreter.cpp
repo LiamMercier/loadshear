@@ -7,30 +7,22 @@
 #include <fstream>
 #include <thread>
 
-// TODO: remove
-#include <iostream>
-
-ParseResult Interpreter::parse_script(std::filesystem::path script_path)
+ParseResult Interpreter::parse_script(std::string script_name)
 {
     // Check the file exists.
-    std::error_code ec;
-    if (!std::filesystem::exists(script_path, ec))
+    std::string error_string;
+    auto script_path = Resolver::resolve_file(script_name,
+                                              error_string);
+
+    if (script_path.empty())
     {
-        ParseResult error;
-        error.success = false;
+        std::string e_str = "Failed to resolve file "
+                            + script_name
+                            + " (got error: "
+                            + error_string
+                            + ")";
 
-        if (ec)
-        {
-            error.reason = ec.message();
-        }
-        else
-        {
-            error.reason = "Failed to open file "
-                           + script_path.string()
-                           + " (could not be found)";
-        }
-
-        return error;
+        return arbitrary_error(std::move(e_str));
     }
 
     std::ifstream script_file(script_path);
@@ -38,23 +30,23 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
     // Ensure we can read the file and get the size.
     if (!script_file.is_open())
     {
-        ParseResult error;
-        error.success = false;
-        error.reason = "Failed to open file "
-                       + script_path.string();
+        std::string e_str = "Failed to open file "
+                            + script_name
+                            + " which resolved to path "
+                            + script_path.string();
 
-        return error;
+        return arbitrary_error(std::move(e_str));
     }
 
-    size_t filesize = static_cast<size_t>(std::filesystem::file_size(script_path, ec));
+    size_t filesize = Resolver::get_file_size(script_path);
 
-    if (ec)
+    if (filesize == 0)
     {
-        ParseResult error;
-        error.success = false;
-        error.reason = ec.message();
+        std::string e_str = "File size for "
+                            + script_path.string()
+                            + " was zero.";
 
-        return error;
+        return arbitrary_error(std::move(e_str));
     }
 
     // Dump entire file into the string to pass to the lexer.
@@ -63,14 +55,12 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
 
     if (!script_file.read(script_raw.data(), filesize))
     {
-        ParseResult error;
-        error.success = false;
-        error.reason = "Failed to read all "
-                       + std::to_string(filesize)
-                       + " bytes from "
-                       + script_path.string();
+        std::string e_str = "Failed to read all "
+                            + std::to_string(filesize)
+                            + " bytes from "
+                            + script_path.string();
 
-        return error;
+        return arbitrary_error(std::move(e_str));
     }
 
     // From here, we have the entire file read and can start parsing.
@@ -79,6 +69,7 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
 
     if (!lexer_res.success)
     {
+        lexer_res.reason = "[Lexer Error]: " + lexer_res.reason;
         return lexer_res;
     }
 
@@ -90,25 +81,16 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
         return error;
     }
 
-    // TODO: remove this print
-    for (const auto & t : tokens_)
-    {
-        std::cout << "[" << ttype_to_string(t.type)
-                  << ", " << t.text
-                  << ", " << t.line << ":" << t.col << "]\n";
-    }
-
     // Now we hand these tokens over to the parser.
     Parser parser(tokens_);
     DSLData unvalidated_script;
-
-    std::cout << "\nStarting parse on tokens!\n\n";
 
     ParseResult parser_res = parser.parse(unvalidated_script);
 
     // Parser:
     if (!parser_res.success)
     {
+        parser_res.reason = "[Parser Error]: " + parser_res.reason;
         return parser_res;
     }
 
@@ -120,20 +102,20 @@ ParseResult Interpreter::parse_script(std::filesystem::path script_path)
 
     if (!verification_res.success)
     {
+        verification_res.reason = "[Validator Error]: " + verification_res.reason;
         return verification_res;
     }
 
-    // Validator:
-
-    return {1, ""};
+    return good_parse();
 }
 
 void Interpreter::set_script_defaults()
 {
-    // For each setting, we check if the current value is the data type maximum if it should be set.
+    // For each setting, we check if the current value is the data
+    // type maximum if it should be set.
 
-    // identifier, session_protocol, header_size, body_max, cannot be defaulted. read, repeat are
-    // already defaulted.
+    // identifier, session_protocol, header_size, body_max, cannot
+    // be defaulted. read, repeat are already defaulted.
 
     auto & settings = script_.settings;
 
@@ -142,7 +124,8 @@ void Interpreter::set_script_defaults()
     {
         int hw_conc = std::thread::hardware_concurrency();
 
-        // If we get no good value, and the user doesn't override, default to single threaded.
+        // If we get no good value, and the user doesn't override,
+        // default to single threaded.
         if (hw_conc <= 0)
         {
             hw_conc = 1;
@@ -157,8 +140,8 @@ void Interpreter::set_script_defaults()
         settings.handler_value = "NOP";
     }
     
-    // We already default the orchestrator actions during parse since we validate the data is
-    // possibly correct (but not validated yet).
+    // We already default the orchestrator actions during parse since we
+    // validate the data is possibly correct (but not validated yet).
 }
 
 ParseResult Interpreter::verify_script()
@@ -252,16 +235,17 @@ ParseResult Interpreter::verify_script()
 
             if (path.empty())
             {
-                std::string e_msg = "SETTINGS block has message handler that "
-                                    + std::string("cannot be resolved (got error: ")
+                std::string e_msg = "SETTINGS block has message handler ("
+                                    + settings.handler_value
+                                    + std::string(") that cannot be resolved ")
+                                    + "(got error: "
                                     + error_string
                                     + ")";
                 return arbitrary_error(std::move(e_msg));
             }
-
-            // TODO: see if file is ok to use
         }
-        // No .wasm file and no alternative message handler, abort since we can't read.
+        // No .wasm file and no alternative message handler,
+        // abort since we can't read yet read is enabled.
         else
         {
             std::string e_msg = "SETTINGS block has no valid message handler for READ.";
@@ -271,6 +255,15 @@ ParseResult Interpreter::verify_script()
 
     // Check we have a SETTINGS for this ORCHESTRATOR block.
     auto & orchestrator = script_.orchestrator;
+
+    // Check we have an orchestrator.
+    if (orchestrator.settings_identifier == "")
+    {
+        std::string e_msg = "ORCHESTRATOR is undefined or has "
+                            + std::string("no SETTINGS identifier. Expected: ")
+                            + "ORCHESRTATOR <settings_id> { ... }";
+        return arbitrary_error(std::move(e_msg));
+    }
 
     if (orchestrator.settings_identifier != settings.identifier)
     {
@@ -490,7 +483,8 @@ ParseResult Interpreter::verify_script()
                         return arbitrary_error(std::move(e_msg));
                     }
 
-                    // If more than 8 bytes are being sent, this is undefined behavior.
+                    // If more than 8 bytes are being sent,
+                    // this is undefined behavior.
                     if (time_mod.timestamp_bytes.second > 8)
                     {
                         std::string e_msg = "SEND [action "
@@ -502,14 +496,19 @@ ParseResult Interpreter::verify_script()
                     }
 
                     // Check we do not exceed the payload bounds.
-                    if (time_mod.timestamp_bytes.end_from_length() > packet_size)
+                    if (time_mod.timestamp_bytes.end_from_length() >= packet_size)
                     {
                         std::string e_msg = "SEND [action "
                                             + std::to_string(i)
                                             + "] has TIMESTAMP ending at index "
                                             + std::to_string(time_mod.timestamp_bytes.end_from_length())
-                                            + " exceeding packet size "
-                                            + std::to_string(packet_size);
+                                            + " exceeding end of packet "
+                                            + action.packet_identifier
+                                            + " which has size "
+                                            + std::to_string(packet_size)
+                                            + " (index ends at "
+                                            + std::to_string(packet_size - 1)
+                                            + ")";
                         return arbitrary_error(std::move(e_msg));
                     }
                 }
@@ -534,7 +533,8 @@ ParseResult Interpreter::verify_script()
                         return arbitrary_error(std::move(e_msg));
                     }
 
-                    // If more than 8 bytes are being sent, this is undefined behavior.
+                    // If more than 8 bytes are being sent,
+                    // this is undefined behavior.
                     if (counter_mod.counter_bytes.second > 8)
                     {
                         std::string e_msg = "SEND [action "
@@ -546,14 +546,19 @@ ParseResult Interpreter::verify_script()
                     }
 
                     // Check we do not exceed the payload bounds.
-                    if (counter_mod.counter_bytes.end_from_length() > packet_size)
+                    if (counter_mod.counter_bytes.end_from_length() >= packet_size)
                     {
                         std::string e_msg = "SEND [action "
                                             + std::to_string(i)
                                             + "] has COUNTER ending at index "
                                             + std::to_string(counter_mod.counter_bytes.end_from_length())
-                                            + " exceeding packet size "
-                                            + std::to_string(packet_size);
+                                            + " exceeding end of packet "
+                                            + action.packet_identifier
+                                            + " which has size "
+                                            + std::to_string(packet_size)
+                                            + " (index ends at "
+                                            + std::to_string(packet_size - 1)
+                                            + ")";
                         return arbitrary_error(std::move(e_msg));
                     }
                 }
@@ -612,8 +617,8 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = "DRAIN [action "
                                         + std::to_string(i)
-                                        + "] has timeout set to 0 "
-                                        + "and would immediately evict sessions. Use "
+                                        + "] has timeout set to 0 and "
+                                        + "would immediately evict sessions. Use "
                                         + "DISCONNECT if this is desired.";
                     return arbitrary_error(std::move(e_msg));
                 }
@@ -666,8 +671,9 @@ ParseResult Interpreter::verify_script()
 
                 // Check disconnect was not already called.
                 //
-                // We cannot check if the session is active since we might DRAIN then DISCONNECT
-                // certain ranges differently for some behaviors.
+                // We cannot check if the session is active since we
+                // might DRAIN then DISCONNECT certain ranges
+                // differently for some behaviors.
                 for (size_t j = action.range.start; j < action.range.second; j++)
                 {
                     if (session_disconnect_called[j] == 1)

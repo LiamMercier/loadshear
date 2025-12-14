@@ -7,7 +7,6 @@ Lexer::Lexer(std::string source)
 
 ParseResult Lexer::tokenize(std::vector<Token> & tokens)
 {
-    ParseResult result;
     tokens.clear();
 
     // Go through the script_source_ text and create tokens.
@@ -79,7 +78,12 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
                     advance();
                     value.push_back('"');
                 }
-                // TODO: escaped $ symbol.
+                // Escaped $ symbol.
+                else if (next_c == '\\' && peek() == '$')
+                {
+                    advance();
+                    value.push_back('$');
+                }
                 else
                 {
                     value.push_back(next_c);
@@ -89,7 +93,17 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
             // If we hit EOF during this, bad parse.
             if (eof())
             {
-                // TODO: exit with error.
+                advance();
+
+                ParseResult res;
+                res.success = false;
+                res.reason = "Reached EOF at [line "
+                            + std::to_string(line_)
+                            + " column "
+                            + std::to_string(col_)
+                            + "] (expected ending quote)";
+
+                return res;
             }
 
             // Other quote needs to be consumed as well.
@@ -177,11 +191,22 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
         }
 
 
-        // If we do not recognize the token, we should stop now, there is something wrong
-        // with the script.
+        // If we do not recognize the token, we should stop now,
+        // there is something wrong with the script.
         {
-            // TODO: exit with error.
-            // invalid character sequence at "..."
+            char bad_c = advance();
+
+            ParseResult res;
+            res.success = false;
+            res.reason = "Invalid character '"
+                         + std::string(1, bad_c)
+                         + "' at [line "
+                         + std::to_string(line_)
+                         + " column "
+                         + std::to_string(col_)
+                         + "]";
+
+            return res;
         }
 
     }
