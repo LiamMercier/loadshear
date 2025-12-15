@@ -19,9 +19,9 @@ ParseResult Interpreter::parse_script(std::string script_name)
         std::string e_str = styled_string("[Error]: ",
                                           PrintStyle::Error)
                             + "Failed to resolve file "
-                            + script_name
+                            + styled_string(script_name, PrintStyle::BadValue)
                             + " (got error: "
-                            + error_string
+                            + styled_string(error_string, PrintStyle::Error)
                             + ")";
 
         return arbitrary_error(std::move(e_str));
@@ -313,7 +313,11 @@ ParseResult Interpreter::verify_script()
                                                 PrintStyle::BadField)
                                 + " for "
                                 + styled_string("READ", PrintStyle::Keyword)
-                                + " to use for reading";
+                                + " to use for reading (expected "
+                                + styled_string("\"NOP\"", PrintStyle::Expected)
+                                + " or a file path ending in "
+                                + styled_string(".wasm", PrintStyle::Expected)
+                                + ")";
             return arbitrary_error(std::move(e_msg));
         }
     }
@@ -664,10 +668,17 @@ ParseResult Interpreter::verify_script()
                                             + styled_string(time_mod.format_name,
                                                             PrintStyle::BadValue)
                                             + " (expected one of: "
-                                            + styled_string(
-                                                "seconds, milliseconds, "
-                                                "microseconds, nanoseconds",
-                                                PrintStyle::Expected)
+                                            + styled_string("seconds",
+                                                            PrintStyle::Expected)
+                                            + ", "
+                                            + styled_string("milliseconds",
+                                                            PrintStyle::Expected)
+                                            + ", "
+                                            + styled_string("microseconds",
+                                                            PrintStyle::Expected)
+                                            + ", "
+                                            + styled_string("nanoseconds",
+                                                            PrintStyle::Expected)
                                             + ")";
                         return arbitrary_error(std::move(e_msg));
                     }
