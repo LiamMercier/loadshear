@@ -1,0 +1,27 @@
+
+SETTINGS my_settings {
+    SESSION = "TCP"
+
+    HEADERSIZE = 8
+
+    BODYMAX = 12288
+
+    READ = "true"
+
+    REPEAT = "false"
+
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+
+    SHARDS = 4
+
+    PACKETS {
+        p1 : "tests/packets/test-packet-1.bin",
+        p2 : "tests/packets/test-packet-heavy.bin"
+    }
+
+    // Should break, invalid token
+    HANDLER = PACKETS
+}

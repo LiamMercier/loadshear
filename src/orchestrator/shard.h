@@ -135,7 +135,10 @@ private:
             std::cerr << "Shard got exception: " << error.what() << "\n";
             work_guard_.reset();
             cntx_.stop();
-            return;
+
+            // We do not return so our orchestrator can hear the callback.
+            //
+            // Shard will be closed after this anyways.
         }
 
         // Our io context ran out of work, we must be closing.

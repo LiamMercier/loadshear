@@ -1,0 +1,27 @@
+SETTINGS my_settings {
+    SESSION = "TCP"
+    HEADERSIZE = 12
+    BODYMAX = 12288
+    READ = "true"
+    REPEAT = "false"
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+    // We should fail since p2 does not refer to a value.
+    PACKETS {
+        p1 : "tests/packets/test-packet-1.bin",
+        p2 : tests/packets/test-packet-1.bin
+    }
+    HANDLER = "tests/modules/tcp-single-session-heartbeat.wasm"
+}
+
+ORCHESTRATOR my_settings {
+    CREATE 100 OFFSET 0ms
+
+    CONNECT 0:100
+
+    SEND 0:100 p1 COPIES 1 COUNTER 2:8 "little":5 OFFSET 200ms
+
+    DISCONNECT 0:100 OFFSET 5s
+}

@@ -1,0 +1,30 @@
+SETTINGS my_settings {
+    SESSION = "TCP"
+    HEADERSIZE = 8
+    BODYMAX = 12288
+    READ = "true"
+    REPEAT = "false"
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+    PACKETS {
+        p1 : "tests/packets/test-packet-1.bin",
+        p2 : "tests/packets/test-packet-heavy.bin"
+    }
+    HANDLER = "tests/modules/tcp-single-session-heartbeat.wasm"
+}
+
+ORCHESTRATOR my_settings {
+    CREATE 100 OFFSET 0ms
+
+    CONNECT 0:100
+
+    // The packet is of size 11, this would write to index values [3, 11]
+    // which is out of bounds, since the largest index is 10.
+    SEND 0:100 p1 COPIES 1 COUNTER 3:8 "little":5 OFFSET 200ms
+
+    FLOOD 0:100 OFFSET 100ms
+
+    DISCONNECT 0:100 OFFSET 5s
+}

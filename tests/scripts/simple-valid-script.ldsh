@@ -1,0 +1,126 @@
+// An example of a valid script
+
+// comments are done using two slashes and continue until the line ends
+
+// This comment should / still be entirely re/moved regardless of extra slahes //
+
+  // commented keywords like ORCHESTRATOR or other tokens should be ignored by the lexer.
+
+// Textual values must be specified using quotes "like" "so" or they will be considered identifiers.
+
+SETTINGS my_settings {
+    // Use TCP for the session type.
+    SESSION = "TCP"
+
+    // Set header size as 8 bytes.
+    HEADERSIZE = 8
+
+    // Set a max body size that the server can send us.
+    BODYMAX = 12288
+
+    // Enable reading the server's messages.
+    READ = "true"
+
+    // Disable repeating, session's will not repeat the payloads after they finish.
+    REPEAT = "false"
+
+    // Use these endpoints when starting the sessions.
+    //
+    // We expect a list of values separated by commas.
+    //
+    // We treat text starting with numbers as a value token, so quotes are not necessary
+    // if we start with numbers.
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+
+    // Create 4 shards instead of the application default of std::hardware_concurrency
+    SHARDS = 4
+
+    // Define the packets that need to be read at startup.
+    //
+    // We define these using [Identifier] [Operator (:)] [Value]
+    //
+    // You can escape quotes with \" and $ with \$
+    //
+    // If --expand-env is passed as an argument, we automatically expand $
+    // and need escaping, otherwise escaping $ is not necessary.
+    //
+    // We automatically expand ~/ to the home directory, but we do not expand
+    // ~otheruser to otheruser's home directory. If you want to do this,
+    // you need to give a path yourself or use an environment variable
+    //  and ensure you can read the files.
+    PACKETS {
+        p1 : "tests/packets/test-packet-1.bin",
+        p2 : "tests/packets/test-packet-heavy.bin"
+    }
+
+    // Tell the application to look for a WASM module file to handle server responses.
+    HANDLER = "tests/modules/tcp-single-session-heartbeat.wasm"
+}
+
+// my_settings holds the endpoints, the user does not need to list them for CONNECT calls
+//
+// Ranges are exclusive on the ending, so 0:50 translates to [0, 50)
+//
+// Each command can be given a timing offset from the previous command,
+// scheduled relative to when the command loop starts
+//
+// If no timing is given, a default is used (see parser.h for the values).
+
+// Each SEND here is read into memory ahead of time when we construct the payload manager.
+//
+// During the orchestrator loop, SEND COPIES N just tells the session's
+// they can write the next 5 payloads from the payload manager.
+ORCHESTRATOR my_settings {
+    // Create 100 session's as soon as we start the orchestrator.
+    CREATE 100 OFFSET 0ms
+    // Connect the first 50 session's 100ms after the last command.
+    //
+    // This will connect all 25 Session's on the first two shards.
+    CONNECT 0:50 OFFSET 100ms
+    // Connect the next 50 session's with application default time offset.
+    //
+    // This will connect all 25 Session's on the last two shards.
+    CONNECT 50:100
+
+    // Queue up 5 writes of test-packet-1.bin with bytes 0-7 replaced by a timestamp
+    // in little endian format representing seconds since unix epoch.
+    SEND 0:100 p1 COPIES 5 TIMESTAMP 0:8 "little":"seconds" OFFSET 200ms
+
+    // Queue up 5 writes of test-packet-1.bin with bytes 0-7 replaced by a global counter
+    // with step size 1 in little endian format.
+    SEND 0:100 p1 COPIES 5 COUNTER 0:8 "little":1 OFFSET 200ms
+
+    // Queue up 1 write of test-packet-1.bin as is.
+    SEND 0:100 p1 COPIES 1
+
+    // Queue up 1 write of p2 with counter and timestamp inserted
+    //
+    // Ranges in loadshear are start:length index values into the packet bytes.
+    SEND 0:100 p2 COPIES 1 COUNTER 0:8 "little":7 TIMESTAMP 12:8 "big":"milliseconds" OFFSET 200ms
+
+    // Tell each session to send all payloads from now on without waiting.
+    //
+    // If REPEAT is enabled, this will have the session repeat previous payloads.
+    //
+    // Most use cases for FLOOD can be handled by simply using SEND
+    FLOOD 0:100 OFFSET 100ms
+
+    // Send a DRAIN command to all session's with a 10000ms timeout,
+    // 500ms after the send was issued.
+    //
+    // If we do not drain in this time, the session's will have
+    // stop() called on them.
+    //
+    // Session's which have FLOOD called on them will continue
+    // to send until this loop of the payloads has been finished,
+    // but another loop will not be started.
+    DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
+
+    // Forcibly disconnect all sessions 15 seconds after DRAIN.
+    // This command is pointless here since the timeout will already do this,
+    // so it should be avoided in most scripts.
+    DISCONNECT 0:100 OFFSET 15s
+}
