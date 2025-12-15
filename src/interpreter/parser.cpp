@@ -842,15 +842,21 @@ ParseResult Parser::bad_action_error(Token t)
 ParseResult Parser::bad_operator_error(Token t, std::string op)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected operator "
-                            + op
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected operator "
+                            + styled_string(op, PrintStyle::Expected)
                             + ")";
 
     return arbitrary_error(error_msg);
@@ -859,15 +865,21 @@ ParseResult Parser::bad_operator_error(Token t, std::string op)
 ParseResult Parser::bad_integer_error(Token t, std::string keyword)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected an integer value for "
-                            + keyword
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected an integer value for "
+                            + styled_string(keyword, PrintStyle::Expected)
                             + ")";
 
     return arbitrary_error(error_msg);
@@ -876,14 +888,20 @@ ParseResult Parser::bad_integer_error(Token t, std::string keyword)
 ParseResult Parser::negative_integer_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected a positive integer)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected a positive integer)";
 
     return arbitrary_error(error_msg);
 }
@@ -891,14 +909,24 @@ ParseResult Parser::negative_integer_error(Token t)
 ParseResult Parser::bad_time_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected a valid time value, i.e 1ms, 1s)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected a valid time value, i.e "
+                            + styled_string("1ms", PrintStyle::Expected)
+                            + ", "
+                            + styled_string("1s", PrintStyle::Expected)
+                            + ")";
 
     return arbitrary_error(error_msg);
 }
@@ -906,15 +934,29 @@ ParseResult Parser::bad_time_error(Token t)
 ParseResult Parser::bad_time_format(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected a valid time format, "
-                            + "i.e seconds, milliseconds, microseconds, nanoseconds)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected a valid time format, "
+                            "i.e "
+                            + styled_string("seconds", PrintStyle::Expected)
+                            + ", "
+                            + styled_string("milliseconds", PrintStyle::Expected)
+                            + ", "
+                            + styled_string("microseconds", PrintStyle::Expected)
+                            + ", "
+                            + styled_string("nanoseconds", PrintStyle::Expected)
+                            + ")";
 
     return arbitrary_error(error_msg);
 }
@@ -922,14 +964,24 @@ ParseResult Parser::bad_time_format(Token t)
 ParseResult Parser::bad_bool_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected true or false)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected "
+                            + styled_string("true", PrintStyle::Expected)
+                            + " or "
+                            + styled_string("false", PrintStyle::Expected)
+                            + ")";
 
     return arbitrary_error(error_msg);
 }
@@ -937,14 +989,24 @@ ParseResult Parser::bad_bool_error(Token t)
 ParseResult Parser::bad_endian_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected little or big for endian field)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected "
+                            + styled_string("\"little\"", PrintStyle::Expected)
+                            + " or "
+                            + styled_string("\"big\"", PrintStyle::Expected)
+                            + " for endian field)";
 
     return arbitrary_error(error_msg);
 }
@@ -952,14 +1014,20 @@ ParseResult Parser::bad_endian_error(Token t)
 ParseResult Parser::bad_nesting_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (unexpected nesting)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (unexpected nesting)";
 
     return arbitrary_error(error_msg);
 }
@@ -967,14 +1035,22 @@ ParseResult Parser::bad_nesting_error(Token t)
 ParseResult Parser::missing_copies_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected COPIES instead)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected "
+                            + styled_string("COPIES", PrintStyle::Expected)
+                            + " instead)";
 
     return arbitrary_error(error_msg);
 }
@@ -982,14 +1058,22 @@ ParseResult Parser::missing_copies_error(Token t)
 ParseResult Parser::unterminated_error(Token t)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected nesting terminator } instead)";
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected nesting terminator "
+                            + styled_string("}", PrintStyle::Expected)
+                            + " instead)";
 
     return arbitrary_error(error_msg);
 }
