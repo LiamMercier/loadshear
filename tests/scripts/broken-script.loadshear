@@ -1,0 +1,15 @@
+
+SETTINGS my_settings {
+    SESSION = "TCP"
+
+    HEADERSIZE = 8
+
+    BODYMAX = 12288
+
+    READ = "true"
+
+    REPEAT = "false"
+
+    ENDPOINTS {
+        "localh
+// EOF early, should report error.

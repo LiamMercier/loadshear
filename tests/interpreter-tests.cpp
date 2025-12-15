@@ -248,3 +248,35 @@ TEST(InterpreterTests, BadPacketsBlock)
                                  << script_file
                                  << ")";
 }
+
+TEST(InterpreterTests, FileEndsEarly)
+{
+    std::string script_file = "tests/scripts/broken-script.loadshear";
+
+    Interpreter interpreter;
+
+    ParseResult result = interpreter.parse_script(script_file);
+
+    std::cout << result.reason << "\n";
+
+    EXPECT_FALSE(result.success) << "Parse result was successful for a known "
+                                 << "invalid script ("
+                                 << script_file
+                                 << ")";
+}
+
+TEST(InterpreterTests, BadParseType)
+{
+    std::string script_file = "tests/scripts/bad-type-script.ldsh";
+
+    Interpreter interpreter;
+
+    ParseResult result = interpreter.parse_script(script_file);
+
+    std::cout << result.reason << "\n";
+
+    EXPECT_FALSE(result.success) << "Parse result was successful for a known "
+                                 << "invalid script ("
+                                 << script_file
+                                 << ")";
+}

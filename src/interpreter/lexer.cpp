@@ -97,11 +97,17 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
 
                 ParseResult res;
                 res.success = false;
-                res.reason = "Reached EOF at [line "
-                            + std::to_string(line_)
-                            + " column "
-                            + std::to_string(col_)
-                            + "] (expected ending quote)";
+                res.reason = "Reached EOF at "
+                            + styled_string("[line "
+                                         + std::to_string(line_)
+                                         + " column "
+                                         + std::to_string(col_)
+                                         + "]",
+                                         PrintStyle::Context)
+                            + " (expected '"
+                            + styled_string("\"",
+                                            PrintStyle::Expected)
+                            + "')";
 
                 return res;
             }
@@ -130,7 +136,8 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
 
                 // We allow identifiers to have alphanumeric characters or underscores.
                 // TODO: document this.
-                if (std::isalnum(static_cast<unsigned char>(next_c)) || next_c == '_')
+                if (std::isalnum(static_cast<unsigned char>(next_c))
+                    || next_c == '_')
                 {
                     ident_str.push_back(advance());
                 }
@@ -170,7 +177,8 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
             {
                 char next_c = peek();
 
-                if (std::isalnum(static_cast<unsigned char>(next_c)) || next_c == '.')
+                if (std::isalnum(static_cast<unsigned char>(next_c))
+                    || next_c == '.')
                 {
                     value.push_back(advance());
                 }
@@ -198,13 +206,19 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
 
             ParseResult res;
             res.success = false;
-            res.reason = "Invalid character '"
-                         + std::string(1, bad_c)
-                         + "' at [line "
-                         + std::to_string(line_)
-                         + " column "
-                         + std::to_string(col_)
-                         + "]";
+            res.reason = "Invalid character "
+                         + styled_string(
+                             "'"
+                             + std::string(1, bad_c)
+                             + "'",
+                             PrintStyle::BadValue)
+                         + " at "
+                         + styled_string("[line "
+                                         + std::to_string(line_)
+                                         + " column "
+                                         + std::to_string(col_)
+                                         + "]",
+                                         PrintStyle::Context);
 
             return res;
         }

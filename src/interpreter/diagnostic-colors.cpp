@@ -19,11 +19,26 @@ constexpr std::string_view ANSI_RESET = "\033[0m";
 constexpr std::string_view PALETTE_ERROR = "\033[31m";
 constexpr std::string_view PALETTE_EXPECTED = "\033[32m";
 constexpr std::string_view PALETTE_KEYWORD = "\033[1m";
-constexpr std::string_view PALETTE_CONTEXT = "\033[90m";
+constexpr std::string_view PALETTE_CONTEXT = "\033[95m";
 constexpr std::string_view PALETTE_BAD_FIELD = "\033[4;31m";
 constexpr std::string_view PALETTE_BAD_VALUE = "\033[91m";
 constexpr std::string_view PALETTE_REFERENCE = "\033[36m";
 constexpr std::string_view PALETTE_LIMITS = "\033[33m";
+
+std::string apply_palette(std::string input, std::string_view palette)
+{
+    std::string out;
+
+    out.reserve(palette.size()
+                + input.size()
+                + ANSI_RESET.size());
+
+    out.append(palette);
+    out.append(input);
+    out.append(ANSI_RESET);
+
+    return out;
+}
 
 std::string styled_string(std::string input, PrintStyle style)
 {
@@ -31,121 +46,41 @@ std::string styled_string(std::string input, PrintStyle style)
     {
         case PrintStyle::Error:
         {
-            std::string out;
-
-            out.reserve(PALETTE_ERROR.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_ERROR);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_ERROR);
         }
         case PrintStyle::Expected:
         {
-            std::string out;
-
-            out.reserve(PALETTE_EXPECTED.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_EXPECTED);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_EXPECTED);
         }
         // Bold but not colored for context clues
         case PrintStyle::Keyword:
         {
-            std::string out;
-
-            out.reserve(PALETTE_KEYWORD.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_KEYWORD);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_KEYWORD);
         }
         // Used sparsely
         case PrintStyle::Context:
         {
-            std::string out;
-
-            out.reserve(PALETTE_CONTEXT.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_CONTEXT);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_CONTEXT);
         }
         // Red and underlined for bad field
         case PrintStyle::BadField:
         {
-            std::string out;
-
-            out.reserve(PALETTE_BAD_FIELD.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_BAD_FIELD);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_BAD_FIELD);
         }
         // Bright red to show error
         case PrintStyle::BadValue:
         {
-            std::string out;
-
-            out.reserve(PALETTE_BAD_VALUE.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_BAD_VALUE);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_BAD_VALUE);
         }
         // Reference to identifiers or other script parts for context.
         case PrintStyle::Reference:
         {
-            std::string out;
-
-            out.reserve(PALETTE_REFERENCE.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_REFERENCE);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_REFERENCE);
         }
         // Maybe orange? Already seems to be pretty orange though.
         case PrintStyle::Limits:
         {
-            std::string out;
-
-            out.reserve(PALETTE_LIMITS.size()
-                        + input.size()
-                        + ANSI_RESET.size());
-
-            out.append(PALETTE_LIMITS);
-            out.append(input);
-            out.append(ANSI_RESET);
-
-            return out;
+            return apply_palette(input, PALETTE_LIMITS);
         }
     }
 

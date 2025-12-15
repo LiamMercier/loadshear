@@ -3,6 +3,7 @@
 #include "parse-result.h"
 #include "token.h"
 #include "script-structs.h"
+#include "diagnostic-colors.h"
 
 class Parser
 {

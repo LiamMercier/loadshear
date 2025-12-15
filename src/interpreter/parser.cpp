@@ -33,14 +33,28 @@ ParseResult Parser::parse(DSLData & script_data)
         else
         {
             std::string error_msg = "Unexpected token "
-                                    + t.text
+                                    + styled_string(t.text,
+                                                    PrintStyle::BadValue)
                                     + " of type "
-                                    + ttype_to_string(t.type)
-                                    + " at [line "
-                                    + std::to_string(t.line)
-                                    + " column "
-                                    + std::to_string(t.col)
-                                    + "] (expected SETTINGS or ORCHESTRATOR)";
+                                    + styled_string(ttype_to_string(t.type),
+                                                    PrintStyle::Keyword)
+                                    + " at "
+                                    + styled_string(
+                                        "[line "
+                                        + std::to_string(t.line)
+                                        + " column "
+                                        + std::to_string(t.col)
+                                        + "]",
+                                        PrintStyle::Context)
+                                    + " (expected "
+                                    + styled_string(
+                                        "SETTINGS",
+                                        PrintStyle::Expected)
+                                    + " or "
+                                    + styled_string(
+                                        "ORCHESTRATOR",
+                                        PrintStyle::Expected)
+                                    + ")";
 
             return arbitrary_error(std::move(error_msg));
         }
@@ -779,15 +793,22 @@ ParseResult Parser::arbitrary_error(std::string reason)
 ParseResult Parser::bad_type_error(Token t, TokenType expected)
 {
     std::string error_msg = "Unexpected token "
-                            + t.text
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
                             + " of type "
-                            + ttype_to_string(t.type)
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected type "
-                            + ttype_to_string(expected)
+                            + styled_string(ttype_to_string(t.type),
+                                            PrintStyle::Keyword)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected type "
+                            + styled_string(ttype_to_string(expected),
+                                            PrintStyle::Expected)
                             + ")";
 
     return arbitrary_error(error_msg);
@@ -796,13 +817,24 @@ ParseResult Parser::bad_type_error(Token t, TokenType expected)
 ParseResult Parser::bad_action_error(Token t)
 {
     std::string error_msg = "Unexpected keyword "
-                            + t.text
-                            + " at [line "
-                            + std::to_string(t.line)
-                            + " column "
-                            + std::to_string(t.col)
-                            + "] (expected a valid action keyword"
-                            + " such as CREATE, CONNECT, ... )";
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " (expected a valid action keyword"
+                            + " such as "
+                            + styled_string("CREATE", PrintStyle::Context)
+                            + ", "
+                            + styled_string("CONNECT", PrintStyle::Context)
+                            + ", "
+                            + styled_string("...", PrintStyle::Context)
+                            + " )";
 
     return arbitrary_error(error_msg);
 }

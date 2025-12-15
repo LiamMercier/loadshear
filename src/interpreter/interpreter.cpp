@@ -377,11 +377,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("CREATE",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        +"] was called twice in "
+                                        +" was called twice in "
                                         + styled_string("ORCHESTRATOR",
                                                         PrintStyle::Keyword)
                                         + " block";
@@ -393,11 +394,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("CREATE",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has count less than "
+                                        + " has count less than "
                                         + styled_string("SHARD",
                                                         PrintStyle::Keyword)
                                         + " value "
@@ -419,11 +421,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("CONNECT",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] called before "
+                                        + " called before "
                                         + styled_string("CREATE",
                                                         PrintStyle::Keyword);
                     return arbitrary_error(std::move(e_msg));
@@ -434,11 +437,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("CONNECT",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] was scheduled for session "
+                                        + " was scheduled for session "
                                         + styled_string(
                                             std::to_string(action.range.second),
                                             PrintStyle::BadValue)
@@ -458,11 +462,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("CONNECT",
                                                           PrintStyle::BadField)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] was scheduled for session "
+                                            + " was scheduled for session "
                                             + styled_string(std::to_string(j),
                                                             PrintStyle::BadValue)
                                             + " while already scheduled";
@@ -481,11 +486,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] is trying to send "
+                                        + " is trying to send "
                                         + styled_string(
                                             std::to_string(action.count),
                                             PrintStyle::BadValue)
@@ -498,11 +504,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] was scheduled for session "
+                                        + " was scheduled for session "
                                         + styled_string(
                                             std::to_string(action.range.second),
                                             PrintStyle::BadValue)
@@ -520,11 +527,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has undefined packet identifier ("
+                                        + " has undefined packet identifier ("
                                         + styled_string(
                                             action.packet_identifier,
                                             PrintStyle::BadValue)
@@ -538,10 +546,11 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                        + std::to_string(i), PrintStyle::Reference)
-                                        + "] has "
+                                        + " "
+                                        + styled_string("[action "
+                                        + std::to_string(i)
+                                        + "]", PrintStyle::Reference)
+                                        + " has "
                                         + styled_string(
                                             std::to_string(action.timestamp_mods
                                                                     .size()
@@ -567,11 +576,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has no packet file for identity"
+                                        + " has no packet file for identity"
                                         + styled_string(action.packet_identifier,
                                                         PrintStyle::BadValue);
                     return arbitrary_error(std::move(e_msg));
@@ -584,11 +594,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has unresolvable packet file "
+                                        + " has unresolvable packet file "
                                         + styled_string(iter->second,
                                                         PrintStyle::BadValue)
                                         + " corresponding to identity "
@@ -607,11 +618,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has packet resolving to path "
+                                        + " has packet resolving to path "
                                         + styled_string(packet_path.string(),
                                                         PrintStyle::Context)
                                         + " with "
@@ -640,11 +652,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                           PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has invalid "
+                                            + " has invalid "
                                             + styled_string("TIMESTAMP",
                                                             PrintStyle::BadField)
                                             + " format "
@@ -665,11 +678,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has "
+                                            + " has "
                                             + styled_string("TIMESTAMP",
                                                             PrintStyle::BadField)
                                             + " of size "
@@ -691,11 +705,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has "
+                                            + " has "
                                             + styled_string("TIMESTAMP",
                                                             PrintStyle::BadField)
                                             + " ending at index "
@@ -736,11 +751,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has "
+                                            + " has "
                                             + styled_string("COUNTER",
                                                             PrintStyle::BadField)
                                             + " step set to "
@@ -755,11 +771,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has "
+                                            + " has "
                                             + styled_string("COUNTER",
                                                             PrintStyle::BadField)
                                             + " of size "
@@ -782,11 +799,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::Keyword)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] has "
+                                            + " has "
                                             + styled_string("COUNTER",
                                                             PrintStyle::BadField)
                                             + " ending at index "
@@ -815,11 +833,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("SEND",
                                                       PrintStyle::BadField)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] was scheduled for session "
+                                            + " was scheduled for session "
                                             + styled_string(std::to_string(j),
                                                             PrintStyle::BadValue)
                                             + " despite not being connected.";
@@ -836,11 +855,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("FLOOD",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] was scheduled for session "
+                                        + " was scheduled for session "
                                         + styled_string(
                                             std::to_string(action.range.second),
                                             PrintStyle::BadValue)
@@ -859,11 +879,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("FLOOD",
                                                           PrintStyle::BadField)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] was scheduled for session "
+                                            + " was scheduled for session "
                                             + styled_string(std::to_string(j),
                                                             PrintStyle::BadValue)
                                             + " despite not being connected.";
@@ -879,11 +900,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("DRAIN",
                                                       PrintStyle::Keyword)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] has "
+                                        + " has "
                                         + styled_string("TIMEOUT",
                                                         PrintStyle::BadField)
                                         + " set to "
@@ -902,11 +924,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("DRAIN",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] was scheduled for session "
+                                        + " was scheduled for session "
                                         + styled_string(
                                             std::to_string(action.range.second),
                                             PrintStyle::BadValue)
@@ -925,11 +948,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("DRAIN",
                                                       PrintStyle::BadField)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] was scheduled for session "
+                                            + " was scheduled for session "
                                             + styled_string(
                                                 std::to_string(j),
                                                 PrintStyle::BadValue)
@@ -949,11 +973,12 @@ ParseResult Interpreter::verify_script()
                 {
                     std::string e_msg = styled_string("DISCONNECT",
                                                       PrintStyle::BadField)
-                                        + " ["
-                                        + styled_string("action "
-                                            + std::to_string(i),
+                                        + " "
+                                        + styled_string("[action "
+                                            + std::to_string(i)
+                                            + "]",
                                             PrintStyle::Reference)
-                                        + "] was scheduled for session "
+                                        + " was scheduled for session "
                                         + styled_string(
                                             std::to_string(action.range.second),
                                             PrintStyle::BadValue)
@@ -976,11 +1001,12 @@ ParseResult Interpreter::verify_script()
                     {
                         std::string e_msg = styled_string("DISCONNECT",
                                                       PrintStyle::BadField)
-                                            + " ["
-                                            + styled_string("action "
-                                                + std::to_string(i),
+                                            + " "
+                                            + styled_string("[action "
+                                                + std::to_string(i)
+                                                + "]",
                                                 PrintStyle::Reference)
-                                            + "] was scheduled for session "
+                                            + " was scheduled for session "
                                             + styled_string(
                                                 std::to_string(j),
                                                 PrintStyle::BadValue)
@@ -1042,10 +1068,11 @@ ParseResult Interpreter::bad_range_error(Range overlapped,
                                          size_t action_id)
 {
     std::string e_msg = styled_string("SEND", PrintStyle::BadField)
-                        + " ["
-                        + styled_string("action "
-                        + std::to_string(action_id), PrintStyle::Reference)
-                        + "] has modification of range {"
+                        + " "
+                        + styled_string("[action "
+                        + std::to_string(action_id)
+                        + "]", PrintStyle::Reference)
+                        + " has modification of range {"
                         + styled_string(
                             std::to_string(violating_range.start)
                             + " "
