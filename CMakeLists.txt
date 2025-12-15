@@ -33,6 +33,7 @@ enable_testing()
 
 find_package(Boost REQUIRED COMPONENTS
     system
+    program_options
 )
 
 if(NOT Boost_FOUND)
@@ -45,3 +46,5 @@ add_subdirectory(src/orchestrator)
 add_subdirectory(src/interpreter)
 add_subdirectory(src/resolver)
 add_subdirectory(tests)
+
+add_subdirectory(src/cli)
