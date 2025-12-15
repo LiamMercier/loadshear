@@ -5,6 +5,7 @@
 
 #include "token.h"
 #include "parse-result.h"
+#include "diagnostic-colors.h"
 
 class Lexer
 {

@@ -2,6 +2,7 @@ add_library(interpreter STATIC
     interpreter.cpp
     lexer.cpp
     parser.cpp
+    diagnostic-colors.cpp
 )
 
 # TODO: consider what we actually need

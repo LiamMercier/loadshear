@@ -6,6 +6,8 @@
 #include "parser.h"
 #include "interpreter.h"
 
+#include "diagnostic-colors.h"
+
 TEST(InterpreterTests, SimpleValidScript)
 {
     std::string script_file = "tests/scripts/simple-valid-script.ldsh";
@@ -206,6 +208,9 @@ TEST(InterpreterTests, SimpleValidScript)
 
     EXPECT_DSL_EQ(correct_data, interpreter.script_);
 
+    std::cout << result.reason << "\n";
+
+
     EXPECT_TRUE(result.success) << "Parsing failed: "
                                 << result.reason;
 
@@ -218,6 +223,9 @@ TEST(InterpreterTests, BadCountersScript)
     Interpreter interpreter;
 
     ParseResult result = interpreter.parse_script(script_file);
+
+    std::cout << result.reason << "\n";
+
 
     EXPECT_FALSE(result.success) << "Parse result was successful for a known "
                                  << "invalid script ("
@@ -235,7 +243,7 @@ TEST(InterpreterTests, BadPacketsBlock)
 
     std::cout << result.reason << "\n";
 
-    EXPECT_FALSE(!result.success) << "Parse result was successful for a known "
+    EXPECT_FALSE(result.success) << "Parse result was successful for a known "
                                  << "invalid script ("
                                  << script_file
                                  << ")";
