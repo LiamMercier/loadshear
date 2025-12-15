@@ -206,7 +206,6 @@ ParseResult Interpreter::verify_script()
         return arbitrary_error(std::move(e_msg));
     }
 
-    // TODO: continue
     // We can have body size be zero, but only if read is false.
     if (settings.body_max == 0 && settings.read)
     {
