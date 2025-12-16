@@ -11,6 +11,10 @@
 
 #include "session-config.h"
 
+#ifdef DEV_BUILD
+#include <iostream>
+#endif
+
 namespace asio = boost::asio;
 
 // TODO: make this class lifetime safe
@@ -197,7 +201,6 @@ private:
 // Warn anyone who compiled a debug version of the code.
 #ifdef DEV_BUILD
 // TODO <feature>: replace with logger.
-#include <iostream>
             else
             {
                 std::cout << "SessionPool had two disconnect callbacks at 0 active sessions!\n";
