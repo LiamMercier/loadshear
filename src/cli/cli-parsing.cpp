@@ -1,33 +1,27 @@
+#include "cli-parsing.h"
+
 #include <iostream>
 
 #include <boost/program_options.hpp>
 
-#include "interpreter.h"
-#include "resolver.h"
-
 namespace po = boost::program_options;
 
-int main(int argc, char** argv)
+std::optional<CLIOptions> parse_cli(int argc, char** argv)
 {
-    // Command line options.
-    std::string script_file;
+    CLIOptions cli_ops;
 
-    bool dry_run = false;
-    bool expand_envs = false;
-
-    // First, parse command line flags.
     po::options_description op_desc("Options");
     op_desc.add_options()
         ("help,h",
          "Show options.")
         ("script,s",
-         po::value<std::string>(&script_file),
+         po::value<std::string>(&cli_ops.script_file),
          "Path to your script.")
         ("dry-run,dry,d",
-         po::bool_switch(&dry_run)->default_value(false),
+         po::bool_switch(&cli_ops.dry_run)->default_value(false),
          "Show runtime plan generated from your script and options.")
         ("expand-envs,e",
-         po::bool_switch(&expand_envs)->default_value(false),
+         po::bool_switch(&cli_ops.expand_envs)->default_value(false),
          "Expand environment variables in script paths.");
 
     po::positional_options_description pos_desc;
@@ -44,32 +38,21 @@ int main(int argc, char** argv)
 
         po::notify(var_map);
 
-        if (var_map.count("help") || script_file.empty())
+        if (var_map.count("help") || cli_ops.script_file.empty())
         {
             std::cout << "\nUsage: "
                       << "loadshear"
                       << " <script_file> [options]\n\n"
                       << op_desc
                       << "\n";
-            return 0;
+            return std::nullopt;
         }
     }
     catch (const po::error & p_err)
     {
         std::cerr << "Error: " << p_err.what() << "\n";
-        return 1;
+        return std::nullopt;
     }
 
-    // Handle anything we need to do with our options now.
-
-    ResolverOptions resolver_ops;
-
-    if (expand_envs)
-    {
-        resolver_ops.expand_env = true;
-    }
-
-    Resolver::set_global_resolve_options(resolver_ops);
-
-    return 0;
+    return cli_ops;
 }

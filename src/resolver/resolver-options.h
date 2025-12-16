@@ -2,5 +2,5 @@
 
 struct ResolverOptions
 {
-    bool expand_env{false};
+    bool expand_envs{false};
 };

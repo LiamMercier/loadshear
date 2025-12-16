@@ -1,5 +1,7 @@
 add_executable(loadshear
-    loadshear-cli.cpp
+    main.cpp
+    cli-parsing.cpp
+    cli.cpp
 )
 
 target_include_directories(loadshear PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

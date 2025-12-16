@@ -89,7 +89,7 @@ namespace Resolver
         std::string expanded = raw_file;
 
         // Expand env variables only if we set this true at startup.
-        if (global_options.expand_env)
+        if (global_options.expand_envs)
         {
             expanded = expand_env_variables(expanded);
         }
