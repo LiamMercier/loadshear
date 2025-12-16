@@ -3,14 +3,14 @@
 int main(int argc, char** argv)
 {
     // First, parse command line flags.
-    auto maybe_ops = parse_cli(argc, argv);
+    CLIParseResult parse_res = parse_cli(argc, argv);
 
-    if (!maybe_ops)
+    if (!parse_res.good_parse())
     {
-        return 1;
+        return parse_res.status_code();
     }
 
-    CLIOptions c_ops = std::move(*maybe_ops);
+    CLIOptions c_ops = std::move(parse_res.options);
 
     CLI cli(std::move(c_ops));
 

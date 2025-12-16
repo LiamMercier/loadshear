@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <string>
 
 struct CLIOptions
@@ -10,4 +9,38 @@ struct CLIOptions
     bool expand_envs;
 };
 
-std::optional<CLIOptions> parse_cli(int argc, char** argv);
+struct CLIParseResult
+{
+    enum class ParseStatus
+    {
+        Ok = 0,
+        Help,
+        Error
+    };
+
+    CLIOptions options;
+    ParseStatus status;
+
+    bool good_parse()
+    {
+        return (status == ParseStatus::Ok);
+    }
+
+    // If the operation exited, why?
+    int status_code()
+    {
+        switch (status)
+        {
+            case ParseStatus::Error:
+            {
+                return 1;
+            }
+            default:
+            {
+                return 0;
+            }
+        }
+    }
+};
+
+CLIParseResult parse_cli(int argc, char** argv);

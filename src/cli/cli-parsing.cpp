@@ -6,9 +6,10 @@
 
 namespace po = boost::program_options;
 
-std::optional<CLIOptions> parse_cli(int argc, char** argv)
+CLIParseResult parse_cli(int argc, char** argv)
 {
-    CLIOptions cli_ops;
+    CLIParseResult res;
+    CLIOptions & cli_ops = res.options;
 
     po::options_description op_desc("Options");
     op_desc.add_options()
@@ -45,14 +46,17 @@ std::optional<CLIOptions> parse_cli(int argc, char** argv)
                       << " <script_file> [options]\n\n"
                       << op_desc
                       << "\n";
-            return std::nullopt;
+
+            res.status = CLIParseResult::ParseStatus::Help;
+            return res;
         }
     }
     catch (const po::error & p_err)
     {
         std::cerr << "Error: " << p_err.what() << "\n";
-        return std::nullopt;
+        res.status = CLIParseResult::ParseStatus::Error;
+        return res;
     }
 
-    return cli_ops;
+    return res;
 }
