@@ -12,6 +12,9 @@ SETTINGS my_settings {
     // Use TCP for the session type.
     SESSION = "TCP"
 
+    // If we need to define a port, this is required.
+    PORT = 55555
+
     // Set header size as 8 bytes.
     HEADERSIZE = 8
 

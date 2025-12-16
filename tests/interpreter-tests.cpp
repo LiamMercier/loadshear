@@ -28,6 +28,7 @@ TEST(InterpreterTests, SimpleValidScript)
         settings.read = true;
         settings.repeat = false;
 
+        settings.port = 55555;
         settings.shards = 4;
 
         settings.handler_value = "tests/modules/tcp-single-session-heartbeat.wasm";

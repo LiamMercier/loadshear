@@ -230,6 +230,7 @@ inline std::string dump_DSL_data(const DSLData & data)
     data_str << "SETTINGS : {\n"
              << "id: " << data.settings.identifier << " "
              << "SESSION: " << data.settings.session_protocol << "\n"
+             << "PORT: " << data.settings.port << "\n"
              << "HEADERSIZE: " << data.settings.header_size << "\n"
              << "BODYMAX: " << data.settings.body_max << " "
              << "READ: " << data.settings.read << " "
@@ -313,6 +314,11 @@ inline void EXPECT_DSL_EQ(const DSLData & expected,
     }
     else if (expected.settings.session_protocol
              != actual.settings.session_protocol)
+    {
+        fail = true;
+    }
+    else if (expected.settings.port
+             != actual.settings.port)
     {
         fail = true;
     }

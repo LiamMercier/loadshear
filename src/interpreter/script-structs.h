@@ -140,6 +140,7 @@ struct SettingsBlock
     bool repeat{false};
 
     uint32_t shards;
+    uint16_t port{0};
 
     std::string handler_value;
     std::vector<std::string> endpoints;

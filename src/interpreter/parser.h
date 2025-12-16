@@ -64,6 +64,8 @@ private:
 
     ParseResult negative_integer_error(Token t);
 
+    ParseResult oob_port_error(Token t);
+
     ParseResult bad_time_error(Token t);
 
     ParseResult bad_time_format(Token t);

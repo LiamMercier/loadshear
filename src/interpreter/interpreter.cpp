@@ -194,6 +194,27 @@ ParseResult Interpreter::verify_script()
         return arbitrary_error(std::move(e_msg));
     }
 
+    // Ensure we have a valid port if needed.
+    // TODO: fill this with more protocols when relevant.
+    if (settings.session_protocol == "TCP")
+    {
+        if (settings.port == 0)
+        {
+            std::string e_msg = styled_string("SETTINGS", PrintStyle::Keyword)
+                            + " block had invalid "
+                            + styled_string("PORT", PrintStyle::BadField)
+                            + " "
+                            + styled_string(std::to_string(settings.port),
+                                            PrintStyle::BadValue)
+                            + " (value must be between "
+                            + styled_string("1", PrintStyle::Limits)
+                            + " and "
+                            + styled_string("65535", PrintStyle::Limits)
+                            + ")";
+            return arbitrary_error(std::move(e_msg));
+        }
+    }
+
     // We can have header size be zero, but only if read is false.
     if (settings.header_size == 0 && settings.read)
     {

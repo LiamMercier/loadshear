@@ -8,6 +8,7 @@ constexpr std::string_view VALID_TOKEN_OPERATORS = "=,:";
 const std::unordered_set<std::string> VALID_KEYWORDS {
     "SETTINGS",
     "SESSION",
+    "PORT",
     "HEADERSIZE",
     "BODYMAX",
     "READ",
