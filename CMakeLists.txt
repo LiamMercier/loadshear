@@ -40,6 +40,7 @@ if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found!")
 endif()
 
+add_subdirectory(src/logger)
 add_subdirectory(src/packets)
 add_subdirectory(src/transports)
 add_subdirectory(src/orchestrator)
