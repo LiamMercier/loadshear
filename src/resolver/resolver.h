@@ -20,4 +20,7 @@ namespace Resolver
 
     std::vector<uint8_t> read_binary_file(const fs::path & path,
                                           std::string & error_string);
+
+    std::string read_bytes_to_contiguous(fs::path path,
+                                         std::span<uint8_t> buffer);
 }

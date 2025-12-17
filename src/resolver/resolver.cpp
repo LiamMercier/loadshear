@@ -161,4 +161,20 @@ namespace Resolver
 
         return bytes;
     }
+
+    std::string read_bytes_to_contiguous(fs::path path,
+                                         std::span<uint8_t> buffer)
+    {
+        std::ifstream file(path, std::ios::binary);
+
+        // Try to read, give error if we fail.
+        if (!file.read(reinterpret_cast<char *>(buffer.data()),
+                                                buffer.size()))
+        {
+            return "Failed to read file "
+                   + path.string();
+        }
+
+        return {};
+    }
 }
