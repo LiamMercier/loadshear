@@ -1,6 +1,7 @@
 #include "resolver.h"
 
 #include <iostream>
+#include <fstream>
 
 namespace Resolver
 {
@@ -110,11 +111,11 @@ namespace Resolver
         return out_path;
     }
 
-    size_t get_file_size(fs::path file)
+    uintmax_t get_file_size(const fs::path & path)
     {
         std::error_code ec;
 
-        auto size = fs::file_size(file, ec);
+        auto size = fs::file_size(path, ec);
 
         if (ec)
         {
@@ -122,5 +123,42 @@ namespace Resolver
         }
 
         return size;
+    }
+
+    std::vector<uint8_t> read_binary_file(const fs::path & path,
+                                          std::string & error_string)
+    {
+        uintmax_t file_size = get_file_size(path);
+
+        // Stop now if file has zero bytes, the program should
+        // terminate if the file is important.
+        if (file_size == 0)
+        {
+            error_string = "File "
+                           + path.string()
+                           + " had zero bytes to read!";
+            return {};
+        }
+        else if (file_size >= SIZE_MAX)
+        {
+            error_string = "File "
+                           + path.string()
+                           + " has more than SIZE_T bytes!";
+            return {};
+        }
+
+        std::vector<uint8_t> bytes(file_size);
+
+        std::ifstream file(path, std::ios::binary);
+
+        // Try to read, give error if we fail.
+        if (!file.read(reinterpret_cast<char *>(bytes.data()), file_size))
+        {
+            error_string = "Failed to read file "
+                           + path.string();
+            return {};
+        }
+
+        return bytes;
     }
 }

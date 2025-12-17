@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <cstdlib>
+#include <vector>
 
 #include "resolver-options.h"
 
@@ -15,5 +16,8 @@ namespace Resolver
 
     void set_global_resolve_options(ResolverOptions options);
 
-    size_t get_file_size(fs::path);
+    uintmax_t get_file_size(const fs::path & path);
+
+    std::vector<uint8_t> read_binary_file(const fs::path & path,
+                                          std::string & error_string);
 }

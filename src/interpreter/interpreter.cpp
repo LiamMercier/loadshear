@@ -43,7 +43,7 @@ ParseResult Interpreter::parse_script(std::string script_name)
         return arbitrary_error(std::move(e_str));
     }
 
-    size_t filesize = Resolver::get_file_size(script_path);
+    uintmax_t filesize = Resolver::get_file_size(script_path);
 
     if (filesize == 0)
     {
@@ -636,7 +636,7 @@ ParseResult Interpreter::verify_script()
                     return arbitrary_error(std::move(e_msg));
                 }
 
-                size_t packet_size = Resolver::get_file_size(packet_path);
+                uintmax_t packet_size = Resolver::get_file_size(packet_path);
 
                 if (packet_size == 0)
                 {
