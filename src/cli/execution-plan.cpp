@@ -11,6 +11,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
+// To map valid timestamp format strings to their enum values.
+const std::unordered_map<std::string, TimestampFormat> ts_format_lookup
+{
+    {"seconds", TimestampFormat::Seconds},
+    {"milliseconds", TimestampFormat::Milliseconds},
+    {"microseconds", TimestampFormat::Microseconds},
+    {"nanoseconds", TimestampFormat::Nanoseconds}
+};
+
 template std::expected<ExecutionPlan<TCPSession>, std::string>
 generate_execution_plan<TCPSession>(const DSLData &,
                                     std::pmr::memory_resource* memory);
@@ -206,7 +215,7 @@ generate_execution_plan(const DSLData & script,
             if (file_size == 0)
             {
                 std::string error_msg = "File "
-                                        + filename
+                                        + path.string()
                                         + " has zero bytes to read!";
                 return std::unexpected{std::move(error_msg)};
             }
@@ -215,7 +224,7 @@ generate_execution_plan(const DSLData & script,
                             (std::numeric_limits<size_t>::max()))
             {
                 std::string error_msg = "File "
-                                        + filename
+                                        + path.string()
                                         + " is too large for your platform's "
                                           "memory (exceeds size_t)";
                 return std::unexpected{std::move(error_msg)};
@@ -224,7 +233,7 @@ generate_execution_plan(const DSLData & script,
             // Allocate memory in the pmr vector.
             std::pmr::vector<uint8_t> buf{memory};
 
-            // If this fails, we were OOM.
+            // If this fails, we are OOM.
             try
             {
                 buf.resize(static_cast<size_t>(file_size));
@@ -234,7 +243,7 @@ generate_execution_plan(const DSLData & script,
                 std::string error_msg = "Failed to allocate memory ("
                                         + std::to_string(file_size)
                                         + " bytes) for packet file "
-                                        + filename;
+                                        + path.string();
                 return std::unexpected{std::move(error_msg)};
             }
 
@@ -262,14 +271,227 @@ generate_execution_plan(const DSLData & script,
             identity_map[identifier] = this_index;
         }
 
-        // // Go through the action data and prepare the payloads.
+        // Go through the action data and prepare the payloads.
+        //
+        // Packet data MUST NOT be changed after this.
         for (const auto & action : script.orchestrator.actions)
         {
-            // TODO:
+            ActionDescriptor desc;
+
+            // For each of these besides SEND we simply create an action
+            // for the orchestrator. For SEND, we also need to add a payload.
+            switch (action.type)
+            {
+                case ActionType::CREATE:
+                {
+                    desc.make_create(0,
+                                     action.range.second,
+                                     action.offset_ms);
+                    break;
+                }
+                case ActionType::CONNECT:
+                {
+                    desc.make_connect(action.range.second,
+                                      action.range.second,
+                                      action.offset_ms);
+                    break;
+                }
+                case ActionType::SEND:
+                {
+                    desc.make_send(action.range.start,
+                                   action.range.second,
+                                   action.count,
+                                   action.offset_ms);
+
+                    // For SEND, we must setup a payload.
+                    PayloadDescriptor payload;
+
+                    // Resolve the packet ID to one of
+                    // our arena allocated packets.
+                    auto p_iter = identity_map.find(action.packet_identifier);
+
+                    // If we can't find the index, there is something wrong,
+                    // under normal operation the program should not do this.
+                    if (p_iter == identity_map.end())
+                    {
+                        std::string e_msg = "Failed to map packet identity "
+                                            + action.packet_identifier
+                                            + " to a read packet. This could "
+                                            + "be an error with the application.";
+                        return std::unexpected{std::move(e_msg)};
+                    }
+
+                    size_t p_index = p_iter->second;
+                    const auto & buf = plan.packet_data[p_index];
+
+                    // Create the const span to the data. This packet
+                    // MUST NOT be modified from now on.
+                    payload.packet_data = {buf.data(), buf.size()};
+
+                    size_t ts_idx = 0;
+                    size_t c_idx = 0;
+                    size_t data_index = 0;
+
+                    // If we have no modifications, mark the payload
+                    // as one static read and continue to the next action.
+                    if (action.mod_order.empty())
+                    {
+                        PacketOperation identity;
+                        identity.make_identity(buf.size());
+
+                        payload.ops.push_back(std::move(identity));
+
+                        // Set counter step as none for this payload.
+                        //
+                        // We store a counter per payload to allow O(1)
+                        // contiguous access during runtime at the
+                        // cost of a few bytes.
+                        //
+                        // See packets/payload-manager.cpp
+                        plan.counter_steps.push_back(0);
+                        plan.payloads.push_back(std::move(payload));
+                        continue;
+                    }
+
+                    // TODO <refactor>: turn this into a helper function.
+
+                    // Fetch the operations to be applied for this payload.
+
+                    // Right now, we only store the last counter's step size.
+                    //
+                    // TODO <feature>: replace this when we can store
+                    //                 multiple counter steps.
+                    size_t last_counter_step = 0;
+
+                    for (const auto & mod : action.mod_order)
+                    {
+                        if (mod == ModificationType::Counter)
+                        {
+                            const auto & c_mod = action.counter_mods[c_idx];
+                            c_idx++;
+
+                            // First, insert the previous "identity" payload
+                            // of all bytes between this mod and the last.
+                            //
+                            // This is the counter start index minus the
+                            // previous index from other operations.
+                            size_t prev_bytes = c_mod.counter_bytes.start
+                                                - data_index;
+
+                            PacketOperation identity;
+                            identity.make_identity(prev_bytes);
+
+                            // Turn this counter into a packet operation.
+                            PacketOperation counter;
+                            counter.make_counter(c_mod.counter_bytes.second,
+                                                 c_mod.little_endian);
+
+                            // Push these operations and the counter step.
+                            payload.ops.push_back(std::move(identity));
+                            payload.ops.push_back(std::move(counter));
+
+                            last_counter_step = c_mod.counter_step;
+
+                            // Increment the index.
+                            data_index += prev_bytes;
+                            data_index += c_mod.counter_bytes.second;
+                        }
+                        else if (mod == ModificationType::Timestamp)
+                        {
+                            const auto & ts_mod = action.timestamp_mods[ts_idx];
+                            ts_idx++;
+
+                            size_t prev_bytes = ts_mod.timestamp_bytes.start
+                                                - data_index;
+
+                            PacketOperation identity;
+                            identity.make_identity(prev_bytes);
+
+                            // We need to resolve the time format here.
+                            //
+                            // This should be valid from previous checks when
+                            // parsing the script, but it is good to ensure
+                            // correctness here as well.
+                            auto format_iter = ts_format_lookup
+                                                    .find(ts_mod.format_name);
+
+                            if (format_iter == ts_format_lookup.end())
+                            {
+                                std::string e_msg = "Failed to resolve "
+                                                    "timestamp format "
+                                                    "for value "
+                                                    + ts_mod.format_name
+                                                    + " (this should have "
+                                                    "been caught by the "
+                                                    "DSL validator)";
+
+                                return std::unexpected{e_msg};
+                            }
+
+                            TimestampFormat ts_format = format_iter->second;
+
+                            PacketOperation timestamp;
+                            timestamp.make_timestamp(ts_mod.timestamp_bytes.second,
+                                                     ts_mod.little_endian,
+                                                     ts_format);
+
+                            payload.ops.push_back(std::move(identity));
+                            payload.ops.push_back(std::move(timestamp));
+
+                            // Increment the index.
+                            data_index += prev_bytes;
+                            data_index += ts_mod.timestamp_bytes.second;
+                        }
+                    }
+
+                    // Insert the remaining bytes if any exist.
+                    if (data_index < buf.size())
+                    {
+                        size_t remaining = buf.size() - data_index;
+
+                        PacketOperation identity;
+                        identity.make_identity(remaining);
+                        payload.ops.push_back(std::move(identity));
+                    }
+
+                    plan.counter_steps.push_back(last_counter_step);
+                    plan.payloads.push_back(std::move(payload));
+
+                    break;
+                }
+                case ActionType::FLOOD:
+                {
+                    desc.make_flood(action.range.start,
+                                    action.range.second,
+                                    action.offset_ms);
+                    break;
+                }
+                case ActionType::DRAIN:
+                {
+                    desc.make_drain(action.range.start,
+                                    action.range.second,
+                                    action.count,
+                                    action.offset_ms);
+                    break;
+                }
+                case ActionType::DISCONNECT:
+                {
+                    desc.make_disconnect(action.range.start,
+                                         action.range.second,
+                                         action.offset_ms);
+
+                    break;
+                }
+            }
+
+            // Push the results of parsing this action.
+            plan.actions.push_back(std::move(desc));
         }
 
+        // All data should be pushed, we can start our TCP orchestrator now.
         return plan;
     }
+    // TODO <feature>: other session types.
     else
     {
         static_assert(always_false<Session>,

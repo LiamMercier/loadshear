@@ -32,6 +32,7 @@ struct ExecutionPlan
     std::vector<PayloadDescriptor> payloads;
     std::vector<uint16_t> counter_steps;
 
+    // Settings for the orchestrator ripped from the script.
     OrchestratorConfig<Session> config;
 
     // Arena allocated packet buffers.
