@@ -9,11 +9,13 @@
 #include <wasmtime.hh>
 
 template std::expected<ExecutionPlan<TCPSession>, std::string>
-generate_execution_plan<TCPSession>(const DSLData &);
+generate_execution_plan<TCPSession>(const DSLData &,
+                                    std::pmr::memory_resource* memory);
 
 template<typename Session>
 std::expected<ExecutionPlan<Session>, std::string>
-generate_execution_plan(const DSLData & script)
+generate_execution_plan(const DSLData & script,
+                        std::pmr::memory_resource* memory)
 {
     const auto & settings = script.settings;
 
@@ -127,15 +129,18 @@ generate_execution_plan(const DSLData & script)
         }
 
         // Put this all into our plan's orchestrator config.
-        ExecutionPlan<Session> plan(OrchestratorConfig<Session>
-                                            (session_config,
-                                             host_data,
-                                             factory,
-                                             settings.shards));
+        ExecutionPlan<Session> plan
+                        (
+                            OrchestratorConfig<Session>
+                                (session_config,
+                                    host_data,
+                                    factory,
+                                    settings.shards),
+                            std::pmr::vector<std::pmr::vector<uint8_t>>(memory)
+                        );
 
         // Go through the action data and prepare the payloads.
         // TODO: later.
-
 
         return plan;
     }

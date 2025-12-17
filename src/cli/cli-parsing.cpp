@@ -23,7 +23,10 @@ CLIParseResult parse_cli(int argc, char** argv)
          "Show runtime plan generated from your script and options.")
         ("expand-envs,e",
          po::bool_switch(&cli_ops.expand_envs)->default_value(false),
-         "Expand environment variables in script paths.");
+         "Expand environment variables in script paths.")
+        ("arena-init-mb",
+         po::value<uint64_t>(&cli_ops.arena_init_mb),
+         "Initial size of arena allocator for packet data.");
 
     po::positional_options_description pos_desc;
     pos_desc.add("script", 1);

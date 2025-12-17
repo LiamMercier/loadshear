@@ -18,9 +18,24 @@ int main(int argc, char** argv)
     // Start the logger.
     Logger::init(LogLevel::INFO);
 
-    CLI cli(std::move(c_ops));
+    std::unique_ptr<CLI> cli;
 
-    int cli_res = cli.run();
+    try
+    {
+        cli = std::make_unique<CLI>(std::move(c_ops));
+    }
+    catch (const std::exception & error)
+    {
+        std::string e_str = std::string("Tried to start program (got error: ")
+                            + error.what()
+                            + ")";
+
+        Logger::error(std::move(e_str));
+        Logger::shutdown();
+        return 1;
+    }
+
+    int cli_res = cli->run();
 
     // Turn the logger off.
     Logger::shutdown();

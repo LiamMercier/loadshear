@@ -8,9 +8,10 @@
 #include "all-transports.h"
 
 CLI::CLI(CLIOptions ops)
-:cli_ops_(std::move(ops))
+:cli_ops_(std::move(ops)),
+arena_(cli_ops_.arena_init_mb * (1024 * 1024),
+       std::pmr::get_default_resource())
 {
-
 }
 
 int CLI::run()
@@ -48,7 +49,8 @@ int CLI::execute_script(const DSLData & script)
         // Create TCP specific plan and execute.
         case ProtocolType::TCP:
         {
-            auto plan = generate_execution_plan<TCPSession>(script);
+            auto plan = generate_execution_plan<TCPSession>(script,
+                                                            &arena_);
 
             // Handle unexpected value.
             if (!plan)
@@ -59,7 +61,7 @@ int CLI::execute_script(const DSLData & script)
             }
 
             // TODO: use the plan
-
+            break;
         }
         // Error in script protocol.
         default:

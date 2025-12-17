@@ -1,12 +1,14 @@
 #pragma once
 
 #include <string>
+#include <cstdint>
 
 struct CLIOptions
 {
     std::string script_file;
     bool dry_run;
     bool expand_envs;
+    uint64_t arena_init_mb{0};
 };
 
 struct CLIParseResult
