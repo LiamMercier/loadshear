@@ -49,7 +49,16 @@ int CLI::execute_script(const DSLData & script)
         // Create TCP specific plan and execute.
         case ProtocolType::TCP:
         {
-            //auto plan = generate_execution_plan<TCPSession>(script);
+            auto plan = generate_execution_plan<TCPSession>(script);
+
+            // Handle unexpected value.
+            if (!plan)
+            {
+
+            }
+
+            // TODO: use the plan
+
         }
         // Error in script protocol.
         default:

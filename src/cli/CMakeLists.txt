@@ -7,6 +7,7 @@ add_executable(loadshear
 
 target_include_directories(loadshear PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(transports PUBLIC ${Boost_INCLUDE_DIRS})
+target_include_directories(packets PUBLIC wasmtime)
 
 target_link_libraries(loadshear PRIVATE
     interpreter
@@ -15,4 +16,5 @@ target_link_libraries(loadshear PRIVATE
     transports
     packets
     Boost::program_options
+    wasmtime
 )

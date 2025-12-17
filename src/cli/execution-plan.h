@@ -6,6 +6,8 @@
 #include "orchestrator-config.h"
 #include "payload-structs.h"
 
+#include <expected>
+
 enum class ProtocolType : uint8_t
 {
     TCP,
@@ -15,6 +17,11 @@ enum class ProtocolType : uint8_t
 template<typename Session>
 struct ExecutionPlan
 {
+    ExecutionPlan(OrchestratorConfig<Session> o_config)
+    :config(std::move(o_config))
+    {
+    }
+
     // Actions to feed into the orchestrator.
     std::vector<ActionDescriptor> actions;
 
@@ -26,4 +33,5 @@ struct ExecutionPlan
 };
 
 template<typename Session>
-ExecutionPlan<Session> generate_execution_plan(const DSLData & script);
+std::expected<ExecutionPlan<Session>, std::string>
+generate_execution_plan(const DSLData & script);
