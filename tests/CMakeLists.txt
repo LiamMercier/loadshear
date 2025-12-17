@@ -6,6 +6,8 @@ add_executable(unit-tests
     orchestrator-tests.cpp
     interpreter-tests.cpp
     resolver-tests.cpp
+    cli-tests.cpp
+    test-fixtures.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
