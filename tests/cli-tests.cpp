@@ -10,14 +10,30 @@ TEST(CLITests, ValidTCPPlanGeneration)
     std::pmr::monotonic_buffer_resource arena(8 * 1024 * 1024,
                                               std::pmr::get_default_resource());
 
-    ExecutionPlan correct_plan = get_simple_valid_script_plan(&arena);
+    auto correct_plan = get_simple_valid_script_plan(&arena);
 
     std::pmr::monotonic_buffer_resource arena2(8 * 1024 * 1024,
                                                std::pmr::get_default_resource());
 
-    ExecutionPlan generated_plan = generate_execution_plan(correct_data,
-                                                           &arena2);
+    auto temporary_plan = generate_execution_plan<TCPSession>(correct_data,
+                                                              &arena2);
+    if (!temporary_plan)
+    {
+        FAIL() << "Couldn't generate plan!";
+    }
 
-    EXPECT_PLAN_EQ(correct_plan,
-                   generated_plan) << "ExecutionPlan values not equal!";
+    auto issues = EXPECT_PLAN_EQ<TCPSession>(correct_plan, *temporary_plan);
+
+    if (!issues.empty())
+    {
+        std::string issues_str = "Got errors in comparison:\n";
+
+        for (auto & issue : issues)
+        {
+            issues_str.append(issue);
+            issues_str.append("\n");
+        }
+
+        FAIL() << issues_str;
+    }
 }

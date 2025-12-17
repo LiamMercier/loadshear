@@ -291,7 +291,7 @@ generate_execution_plan(const DSLData & script,
                 }
                 case ActionType::CONNECT:
                 {
-                    desc.make_connect(action.range.second,
+                    desc.make_connect(action.range.start,
                                       action.range.second,
                                       action.offset_ms);
                     break;
@@ -350,7 +350,7 @@ generate_execution_plan(const DSLData & script,
                         // See packets/payload-manager.cpp
                         plan.counter_steps.push_back(0);
                         plan.payloads.push_back(std::move(payload));
-                        continue;
+                        break;
                     }
 
                     // TODO <refactor>: turn this into a helper function.
@@ -378,8 +378,14 @@ generate_execution_plan(const DSLData & script,
                             size_t prev_bytes = c_mod.counter_bytes.start
                                                 - data_index;
 
-                            PacketOperation identity;
-                            identity.make_identity(prev_bytes);
+                            if (prev_bytes > 0)
+                            {
+                                PacketOperation identity;
+                                identity.make_identity(prev_bytes);
+
+                                payload.ops.push_back(std::move(identity));
+                                data_index += prev_bytes;
+                            }
 
                             // Turn this counter into a packet operation.
                             PacketOperation counter;
@@ -387,13 +393,11 @@ generate_execution_plan(const DSLData & script,
                                                  c_mod.little_endian);
 
                             // Push these operations and the counter step.
-                            payload.ops.push_back(std::move(identity));
                             payload.ops.push_back(std::move(counter));
 
                             last_counter_step = c_mod.counter_step;
 
                             // Increment the index.
-                            data_index += prev_bytes;
                             data_index += c_mod.counter_bytes.second;
                         }
                         else if (mod == ModificationType::Timestamp)
@@ -404,8 +408,14 @@ generate_execution_plan(const DSLData & script,
                             size_t prev_bytes = ts_mod.timestamp_bytes.start
                                                 - data_index;
 
-                            PacketOperation identity;
-                            identity.make_identity(prev_bytes);
+                            if (prev_bytes > 0)
+                            {
+                                PacketOperation identity;
+                                identity.make_identity(prev_bytes);
+
+                                payload.ops.push_back(std::move(identity));
+                                data_index += prev_bytes;
+                            }
 
                             // We need to resolve the time format here.
                             //
@@ -435,11 +445,9 @@ generate_execution_plan(const DSLData & script,
                                                      ts_mod.little_endian,
                                                      ts_format);
 
-                            payload.ops.push_back(std::move(identity));
                             payload.ops.push_back(std::move(timestamp));
 
                             // Increment the index.
-                            data_index += prev_bytes;
                             data_index += ts_mod.timestamp_bytes.second;
                         }
                     }

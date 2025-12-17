@@ -274,10 +274,10 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
         plan.actions.push_back(std::move(connect_action));
     }
 
-    // CONNECT 50:100 OFFSET 100ms
+    // CONNECT 50:100
     {
         ActionDescriptor connect_action;
-        connect_action.make_connect(0, 50, Parser::DEFAULT_OFFSET_MS);
+        connect_action.make_connect(50, 100, Parser::DEFAULT_OFFSET_MS);
         plan.actions.push_back(std::move(connect_action));
     }
 
@@ -374,7 +374,7 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
         send_action.make_send(0,
                               100,
                               1,
-                              Parser::DEFAULT_OFFSET_MS);
+                              200);
         plan.actions.push_back(std::move(send_action));
 
         PayloadDescriptor payload_desc;
@@ -389,7 +389,7 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
         {
             PacketOperation packet_op;
-            packet_op.make_identity(5);
+            packet_op.make_identity(4);
 
             payload_desc.ops.push_back(std::move(packet_op));
         }
@@ -403,7 +403,7 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
         {
             PacketOperation packet_op;
-            packet_op.make_identity(5500 - (8 + 8 + 5));
+            packet_op.make_identity(5500 - (8 + 8 + 4));
 
             payload_desc.ops.push_back(std::move(packet_op));
         }
