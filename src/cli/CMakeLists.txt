@@ -15,6 +15,7 @@ target_link_libraries(loadshear PRIVATE
     orchestrator
     transports
     packets
+    logger
     Boost::program_options
     wasmtime
 )

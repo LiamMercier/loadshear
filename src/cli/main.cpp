@@ -1,5 +1,7 @@
-#include "cli.h"
 #include <iostream>
+
+#include "cli.h"
+#include "logger.h"
 
 int main(int argc, char** argv)
 {
@@ -13,7 +15,15 @@ int main(int argc, char** argv)
 
     CLIOptions c_ops = std::move(parse_res.options);
 
+    // Start the logger.
+    Logger::init(LogLevel::INFO);
+
     CLI cli(std::move(c_ops));
 
-    return cli.run();
+    int cli_res = cli.run();
+
+    // Turn the logger off.
+    Logger::shutdown();
+
+    return cli_res;
 }

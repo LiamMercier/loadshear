@@ -27,10 +27,10 @@ constexpr std::array<std::string_view, NUM_LOG_LEVELS> log_prefix = []
 {
     std::array<std::string_view, NUM_LOG_LEVELS> a{};
 
-    a[static_cast<size_t>(LogLevel::DEBUG)] = "[DEBUG]: ";
+    a[static_cast<size_t>(LogLevel::DEBUG)] = "\033[36m[DEBUG]:\033[0m ";
     a[static_cast<size_t>(LogLevel::INFO)] = "";
-    a[static_cast<size_t>(LogLevel::WARN)] = "[WARN]: ";
-    a[static_cast<size_t>(LogLevel::ERROR)] = "[ERROR]: ";
+    a[static_cast<size_t>(LogLevel::WARN)] = "\033[32m[WARN]:\033[0m ";
+    a[static_cast<size_t>(LogLevel::ERROR)] = "\033[31m[ERROR]:\033[0m ";
 
     return a;
 }();
@@ -56,6 +56,27 @@ public:
     static void log(LogLevel level, std::string msg)
     {
         instance().push_message(level, std::move(msg));
+    }
+
+    // Helpers to make logging easier.
+    static void debug(std::string msg)
+    {
+        instance().push_message(LogLevel::DEBUG, std::move(msg));
+    }
+
+    static void info(std::string msg)
+    {
+        instance().push_message(LogLevel::INFO, std::move(msg));
+    }
+
+    static void warn(std::string msg)
+    {
+        instance().push_message(LogLevel::WARN, std::move(msg));
+    }
+
+    static void error(std::string msg)
+    {
+        instance().push_message(LogLevel::ERROR, std::move(msg));
     }
 
 private:

@@ -1,10 +1,9 @@
 #include "cli.h"
 
-#include <iostream>
-
 #include "interpreter.h"
 #include "resolver.h"
 #include "execution-plan.h"
+#include "logger.h"
 
 #include "all-transports.h"
 
@@ -26,7 +25,7 @@ int CLI::run()
 
     if (!i_res.success)
     {
-        std::cout << i_res.reason << "\n";
+        Logger::error(i_res.reason);
         return 1;
     }
 
@@ -54,7 +53,9 @@ int CLI::execute_script(const DSLData & script)
             // Handle unexpected value.
             if (!plan)
             {
-
+                std::string e_msg = plan.error();
+                Logger::error(std::move(e_msg));
+                return 1;
             }
 
             // TODO: use the plan
@@ -63,6 +64,10 @@ int CLI::execute_script(const DSLData & script)
         // Error in script protocol.
         default:
         {
+            std::string e_msg = "Unrecognized transport "
+                                + script.settings.session_protocol
+                                + " was specified.";
+            Logger::error(std::move(e_msg));
             return 1;
         }
     }

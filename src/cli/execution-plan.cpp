@@ -4,6 +4,7 @@
 #include "wasm-message-handler.h"
 #include "nop-message-handler.h"
 #include "resolver.h"
+#include "logger.h"
 
 #include <wasmtime.hh>
 
@@ -102,8 +103,13 @@ generate_execution_plan(const DSLData & script)
 
             if (ec)
             {
-                // TODO: handle error, show ec.message() or whatever and
                 // warn then continue
+                std::string e_msg = endpoint
+                                    + " could not be resolved (got error: "
+                                    + ec.message()
+                                    + ")";
+
+                Logger::warn(std::move(e_msg));
             }
 
             // Store results in host info.
