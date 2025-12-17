@@ -7,4 +7,5 @@ target_link_libraries(orchestrator PRIVATE
     Boost::system
     transports
     packets
+    logger
 )

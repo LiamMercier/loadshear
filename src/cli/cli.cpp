@@ -2,8 +2,8 @@
 
 #include "interpreter.h"
 #include "resolver.h"
-#include "execution-plan.h"
 #include "logger.h"
+#include "orchestrator.h"
 
 #include "all-transports.h"
 
@@ -49,19 +49,21 @@ int CLI::execute_script(const DSLData & script)
         // Create TCP specific plan and execute.
         case ProtocolType::TCP:
         {
-            auto plan = generate_execution_plan<TCPSession>(script,
-                                                            &arena_);
+            auto plan_tmp = generate_execution_plan<TCPSession>(script,
+                                                                &arena_);
 
             // Handle unexpected value.
-            if (!plan)
+            if (!plan_tmp)
             {
-                std::string e_msg = plan.error();
+                std::string e_msg = plan_tmp.error();
                 Logger::error(std::move(e_msg));
                 return 1;
             }
 
-            // TODO: use the plan
-            break;
+            ExecutionPlan<TCPSession> plan = *plan_tmp;
+
+            // Now, start the program's main loop.
+            return start_orchestrator_loop(plan);
         }
         // Error in script protocol.
         default:
@@ -74,10 +76,31 @@ int CLI::execute_script(const DSLData & script)
         }
     }
 
-    return 0;
+    return 1;
 
 }
 
+template <typename Session>
+int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
+{
 
+    try
+    {
+        Orchestrator<Session> orchestrator(plan.actions,
+                                       plan.payloads,
+                                       plan.counter_steps,
+                                       plan.config);
 
+        orchestrator.start();
+    }
+    catch (const std::exception & error)
+    {
+        std::string e_msg = "Caught exception in orchestrator loop: "
+                            + std::string(error.what());
+        Logger::error(std::move(e_msg));
 
+        return 1;
+    }
+
+    return 0;
+}

@@ -12,6 +12,7 @@
 #include "payload-manager.h"
 #include "action-descriptor.h"
 #include "host-info.h"
+#include "logger.h"
 
 namespace asio = boost::asio;
 
@@ -132,7 +133,11 @@ private:
         }
         catch (const std::exception & error)
         {
-            std::cerr << "Shard got exception: " << error.what() << "\n";
+            std::string e_msg = "Shard got exception: "
+                                + std::string(error.what());
+
+            Logger::warn(std::move(e_msg));
+
             work_guard_.reset();
             cntx_.stop();
 
@@ -149,7 +154,7 @@ private:
 #ifdef DEV_BUILD
         else
         {
-            std::cout << "Shard did not have callback on close!\n";
+            Logger::warn(std::move("Shard did not have callback on close!"));
         }
 #endif
     }
@@ -227,7 +232,8 @@ private:
                     return;
                 }
 
-                std::cerr << "Shard drain taking too long. Forcing stop.\n";
+                Logger::warn(std::move("Shard drain taking too long. "
+                                       "Forcing stop."));
 
                 this->stop();
         });

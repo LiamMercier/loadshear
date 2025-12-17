@@ -3,6 +3,7 @@
 #include "action-descriptor.h"
 #include "orchestrator-config.h"
 #include "shard.h"
+#include "logger.h"
 
 #include <utility>
 
@@ -25,35 +26,26 @@ public:
     config_(std::move(config)),
     payload_manager_(std::make_shared<PayloadManager>(payloads, counter_steps))
     {
-        try
+        // Try to create shards.
+        shards_.reserve(config_.shard_count);
+        shard_ranges_.reserve(config_.shard_count);
+
+        for (size_t i = 0; i < config_.shard_count; i++)
         {
-            // Try to create shards.
-            shards_.reserve(config_.shard_count);
-            shard_ranges_.reserve(config_.shard_count);
+            typename Shard<Session>::NotifyShardClosed on_shard_callback =
+                [this](){
+                    this->shard_exit_callback();
+                };
 
-            for (size_t i = 0; i < config_.shard_count; i++)
-            {
-                typename Shard<Session>::NotifyShardClosed on_shard_callback =
-                    [this](){
-                        this->shard_exit_callback();
-                    };
+            active_shards_ += 1;
 
-                active_shards_ += 1;
-
-                // make pointer to shard
-                shards_.emplace_back(std::make_unique<Shard<Session>>
-                                        (payload_manager_,
-                                         config_.handler_factory_,
-                                         config_.session_config,
-                                         config_.host_info,
-                                         on_shard_callback));
-            }
-
-        }
-        catch (const std::exception & error)
-        {
-            std::cerr << "Failed to construct orchestrator. Closing.\n";
-            return;
+            // make pointer to shard
+            shards_.emplace_back(std::make_unique<Shard<Session>>
+                                    (payload_manager_,
+                                        config_.handler_factory_,
+                                        config_.session_config,
+                                        config_.host_info,
+                                        on_shard_callback));
         }
     }
 
@@ -173,9 +165,12 @@ private:
                 // Check we distributed the range properly.
                 if (start != action.count)
                 {
-                    // TODO <feature>: replace with logger.
-                    std::cerr << "Not all session index values were distributed!\n";
-                    std::cerr << "start: " << start << " count: " << action.count << "\n";
+                    std::string e_msg = "Not all session index values "
+                                        "were distributed! start: "
+                                        + std::to_string(start)
+                                        + " count: "
+                                        + std::to_string(action.count);
+                    Logger::warn(std::move(e_msg));
                 }
             }
 
@@ -186,8 +181,10 @@ private:
         // range for each shard K's range [shard_ranges_[k].first, shard_ranges_[k].second)
         for (size_t k = 0; k < shards_.size(); k++)
         {
-            uint32_t intersect_lower = std::max(action.sessions_start, shard_ranges_[k].first);
-            uint32_t intersect_upper = std::min(action.sessions_end, shard_ranges_[k].second);
+            uint32_t intersect_lower = std::max(action.sessions_start,
+                                                shard_ranges_[k].first);
+            uint32_t intersect_upper = std::min(action.sessions_end,
+                                                shard_ranges_[k].second);
 
             // No overlap.
             if (intersect_lower >= intersect_upper)
@@ -209,7 +206,10 @@ private:
 
             if (!success)
             {
-                std::cerr << "Tried to submit work to shard " << k << " and failed!\n";
+                std::string e_msg = "Tried to submit work to shard "
+                                    + std::to_string(k)
+                                    + " and failed!";
+                Logger::warn(std::move(e_msg));
             }
         }
     }

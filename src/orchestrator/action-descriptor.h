@@ -65,6 +65,7 @@ inline void ActionDescriptor::make_create(uint32_t start,
 
     sessions_start = start;
     sessions_end = end;
+    count = end - start;
     offset = std::chrono::milliseconds(offset_ms);
 }
 
