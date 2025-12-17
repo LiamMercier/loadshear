@@ -20,6 +20,7 @@ target_link_libraries(unit-tests PRIVATE
     orchestrator
     interpreter
     resolver
+    cli
 )
 
 include(GoogleTest)

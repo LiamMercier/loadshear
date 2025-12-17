@@ -1,5 +1,9 @@
+#include <gtest/gtest.h>
+
 #include "test-fixtures.h"
 #include "parser.h"
+#include "wasm-message-handler.h"
+#include "nop-message-handler.h"
 
 DSLData get_simple_valid_script_data()
 {
@@ -194,4 +198,240 @@ DSLData get_simple_valid_script_data()
     }
 
     return correct_data;
+}
+
+ExecutionPlan<TCPSession>
+get_simple_valid_script_plan(std::pmr::memory_resource* memory)
+{
+    SessionConfig session_config(8, 12288, true, false);
+    HostInfo<TCPSession> h_info;
+
+    using tcp = asio::ip::tcp;
+
+    asio::io_context temp_cntx;
+
+    tcp::resolver ip_resolver(temp_cntx);
+
+    boost::system::error_code ec;
+
+    {
+        auto res = ip_resolver.resolve("localhost", "55555", ec);
+
+        if (ec)
+        {
+            ADD_FAILURE() << "Resolver for localhost:55555 had ec";
+        }
+
+        for (const auto & entry : res)
+        {
+            h_info.endpoints.push_back(entry.endpoint());
+        }
+    }
+
+    {
+        auto res = ip_resolver.resolve("127.0.0.1", "55555", ec);
+
+        if (ec)
+        {
+             ADD_FAILURE() << "Resolver for 127.0.0.1:55555 had ec";
+        }
+
+        for (const auto & entry : res)
+        {
+            h_info.endpoints.push_back(entry.endpoint());
+        }
+    }
+
+    // Comparison of functions here is irrelevant anyways.
+    Shard<TCPSession>::MessageHandlerFactory factory =
+        []() -> std::unique_ptr<MessageHandler>{
+            return std::make_unique<NOPMessageHandler>();
+        };
+
+
+
+    ExecutionPlan<TCPSession> plan
+                        (
+                            OrchestratorConfig<TCPSession>
+                                (session_config,
+                                 h_info,
+                                 factory,
+                                 4),
+                            std::pmr::vector<std::pmr::vector<uint8_t>>(memory)
+                        );
+
+    // CREATE 100 OFFSET 0ms
+    {
+        ActionDescriptor create;
+        create.make_create(0, 100, 0);
+        plan.actions.push_back(std::move(create));
+    }
+
+    // CONNECT 0:50 OFFSET 100ms
+    {
+        ActionDescriptor connect_action;
+        connect_action.make_connect(0, 50, 100);
+        plan.actions.push_back(std::move(connect_action));
+    }
+
+    // CONNECT 50:100 OFFSET 100ms
+    {
+        ActionDescriptor connect_action;
+        connect_action.make_connect(0, 50, Parser::DEFAULT_OFFSET_MS);
+        plan.actions.push_back(std::move(connect_action));
+    }
+
+    // We will not access this anyways.
+    std::vector<uint8_t> fake_vector;
+
+    // SEND 0:100 p1 COPIES 5 TIMESTAMP 0:8 "little":"seconds" OFFSET 200ms
+    {
+        ActionDescriptor send_action;
+        send_action.make_send(0,
+                              100,
+                              5,
+                              200);
+        plan.actions.push_back(std::move(send_action));
+
+        PayloadDescriptor payload_desc;
+        payload_desc.packet_data = {fake_vector.data(), size_t(11)};
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_timestamp(8, true, TimestampFormat::Seconds);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_identity(3);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        plan.counter_steps.push_back(0);
+        plan.payloads.push_back(std::move(payload_desc));
+    }
+
+    // SEND 0:100 p1 COPIES 5 COUNTER 0:8 "little":1 OFFSET 200ms
+    {
+        ActionDescriptor send_action;
+        send_action.make_send(0,
+                              100,
+                              5,
+                              200);
+        plan.actions.push_back(std::move(send_action));
+
+        PayloadDescriptor payload_desc;
+        payload_desc.packet_data = {fake_vector.data(), size_t(11)};
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_counter(8, true);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_identity(3);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        plan.counter_steps.push_back(1);
+        plan.payloads.push_back(std::move(payload_desc));
+    }
+
+    // SEND 0:100 p1 COPIES 1
+    {
+        ActionDescriptor send_action;
+        send_action.make_send(0,
+                              100,
+                              1,
+                              Parser::DEFAULT_OFFSET_MS);
+        plan.actions.push_back(std::move(send_action));
+
+        PayloadDescriptor payload_desc;
+        payload_desc.packet_data = {fake_vector.data(), size_t(11)};
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_identity(11);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        plan.counter_steps.push_back(0);
+        plan.payloads.push_back(std::move(payload_desc));
+    }
+
+    // SEND 0:100 p2 COPIES 1 COUNTER 0:8 "little":7 TIMESTAMP 12:8
+    // "big":"milliseconds" OFFSET 200ms
+    {
+        ActionDescriptor send_action;
+        send_action.make_send(0,
+                              100,
+                              1,
+                              Parser::DEFAULT_OFFSET_MS);
+        plan.actions.push_back(std::move(send_action));
+
+        PayloadDescriptor payload_desc;
+        payload_desc.packet_data = {fake_vector.data(), size_t(5500)};
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_counter(8, true);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_identity(5);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_timestamp(8, false, TimestampFormat::Milliseconds);
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        {
+            PacketOperation packet_op;
+            packet_op.make_identity(5500 - (8 + 8 + 5));
+
+            payload_desc.ops.push_back(std::move(packet_op));
+        }
+
+        plan.counter_steps.push_back(7);
+        plan.payloads.push_back(std::move(payload_desc));
+    }
+
+    // FLOOD 0:100 OFFSET 100ms
+    {
+        ActionDescriptor flood;
+        flood.make_flood(0, 100, 100);
+        plan.actions.push_back(std::move(flood));
+    }
+
+    // DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
+    {
+        ActionDescriptor drain;
+        drain.make_drain(0, 100, 10000, 500);
+        plan.actions.push_back(std::move(drain));
+    }
+
+    // DISCONNECT 0:100 OFFSET 15s
+    {
+        ActionDescriptor disc;
+        disc.make_disconnect(0, 100, 15 * 1000);
+        plan.actions.push_back(std::move(disc));
+    }
+
+    return plan;
 }
