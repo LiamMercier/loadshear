@@ -34,12 +34,11 @@ public:
           NotifyShardClosed on_shard_closed)
     :work_guard_(asio::make_work_guard(cntx_)),
     running_(false),
-    drain_timer_(cntx_),
     stop_timer_(cntx_),
     handler_factory_(std::move(handler_factory)),
     payload_manager_(std::move(manager_ptr)),
     config_(config),
-    session_pool_(cntx_, config_, [this](){ this->on_sessions_closed(); }),
+    session_pool_(cntx_, config_, [this](){ this->on_pool_closed(); }),
     host_info_(std::move(host_info_copy)),
     on_shard_closed_(std::move(on_shard_closed))
     {
@@ -87,20 +86,10 @@ public:
         }
 
         asio::post(cntx_, [this](){
+            // Start force shutdown timer for if pool refuses to close everything.
+            start_force_stop_timer(30*1000);
 
-            boost::system::error_code ignored;
-            drain_timer_.cancel(ignored);
-
-            if (session_pool_.active_sessions() > 0)
-            {
-                session_pool_.stop_all_sessions();
-
-                // Start force shutdown timer for if pool refuses to close everything.
-                start_force_stop_timer(30*1000);
-            }
-
-            // Reset work guard now.
-            work_guard_.reset();
+            session_pool_.shutdown();
         });
     }
 
@@ -166,7 +155,8 @@ private:
             case ActionType::CREATE:
             {
                 // Create requested number of sessions.
-                session_pool_.create_sessions(action.sessions_end - action.sessions_start,
+                session_pool_.create_sessions(action.sessions_end
+                                              - action.sessions_start,
                                               cntx_,
                                               config_,
                                               *message_handler_,
@@ -198,9 +188,6 @@ private:
             {
                 session_pool_.drain_sessions_range(action.sessions_start,
                                                    action.sessions_end);
-
-                // Start drain watchdog.
-                start_drain_watchdog(action.count);
                 break;
             }
             case ActionType::DISCONNECT:
@@ -216,29 +203,6 @@ private:
         }
     }
 
-    // Prevent long running drain operations.
-    void start_drain_watchdog(size_t timeout_ms)
-    {
-
-        boost::system::error_code ignored;
-        drain_timer_.cancel(ignored);
-
-        drain_timer_.expires_after(std::chrono::milliseconds(timeout_ms));
-
-        drain_timer_.async_wait(
-            [this](const boost::system::error_code & ec){
-                if (ec)
-                {
-                    return;
-                }
-
-                Logger::warn(std::move("Shard drain taking too long. "
-                                       "Forcing stop."));
-
-                this->stop();
-        });
-    }
-
     // Prevent the shard from hanging if we can't close session's.
     void start_force_stop_timer(size_t timeout_ms)
     {
@@ -250,18 +214,21 @@ private:
             [this](const boost::system::error_code & ec){
                 if (!ec && !cntx_.stopped())
                 {
+                    Logger::warn(std::move("Shard shutdown timed out. "
+                                           "Forcing shutdown."));
                     cntx_.stop();
                 }
         });
     }
 
     // Called by the session pool callback. Could be used to collect analytics.
-    void on_sessions_closed()
+    void on_pool_closed()
     {
-        stop();
-
         boost::system::error_code ignored;
         stop_timer_.cancel(ignored);
+
+        // Reset work guard now.
+        work_guard_.reset();
     }
 
 private:
@@ -275,7 +242,6 @@ private:
     std::atomic<bool> running_{false};
 
     // Shutdown
-    asio::steady_timer drain_timer_;
     asio::steady_timer stop_timer_;
 
     //

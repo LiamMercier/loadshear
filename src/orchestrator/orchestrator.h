@@ -108,6 +108,7 @@ private:
         }
 
         // If we get here, there are no more actions, thread will go idle.
+        do_shutdown();
     }
 
     void schedule_next_action(std::chrono::steady_clock::time_point deadline)
@@ -231,6 +232,26 @@ private:
         }
     }
 
+    void do_shutdown()
+    {
+        if (shutdown_)
+        {
+            return;
+        }
+
+        shutdown_ = true;
+
+        Logger::info("All actions executed, program will spin down.");
+
+        for (const auto & shard : shards_)
+        {
+            if (shard)
+            {
+                shard->stop();
+            }
+        }
+    }
+
 private:
     // io context, timer, timepoint for scheduling.
     asio::io_context cntx_;
@@ -238,6 +259,7 @@ private:
     asio::steady_timer dispatch_timer_;
     std::chrono::steady_clock::time_point startup_time_;
     std::atomic<size_t> active_shards_{0};
+    bool shutdown_{false};
 
     // Action loop and config for this class.
     std::vector<ActionDescriptor> actions_;
