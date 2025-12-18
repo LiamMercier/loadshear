@@ -178,8 +178,6 @@ TEST(ParserTests, ParserFailures)
     input_tokens.push_back(Token{TokenType::Value, "0", 0, 0});
     input_tokens.push_back(Token{TokenType::Operator, ":", 0, 0});
     input_tokens.push_back(Token{TokenType::Value, "100", 0, 0});
-    input_tokens.push_back(Token{TokenType::Keyword, "TIMEOUT", 0, 0});
-    input_tokens.push_back(Token{TokenType::Value, "10s", 0, 0});
 
     input_tokens.push_back(Token{TokenType::Keyword, "DISCONNECT", 0, 0});
     input_tokens.push_back(Token{TokenType::Value, "0", 0, 0});
@@ -205,7 +203,7 @@ TEST(ParserTests, ParserFailures)
 
         // At this index we have no orchestrator block but we do have
         // an entire settings block, so we wont return an error at time parse.
-        if (i != 36)
+        if (i != 34)
         {
             EXPECT_FALSE(res.success) << "Parse returned success for bad script!";
         }

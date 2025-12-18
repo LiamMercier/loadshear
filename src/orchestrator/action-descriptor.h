@@ -41,6 +41,41 @@ struct ActionDescriptor
                                 uint32_t end,
                                 uint32_t offset_ms);
 
+    std::string type_to_string() const
+    {
+        switch (type)
+        {
+            case ActionType::CREATE:
+            {
+                return "CREATE";
+            }
+            case ActionType::CONNECT:
+            {
+                return "CONNECT";
+            }
+            case ActionType::SEND:
+            {
+                return "SEND";
+            }
+            case ActionType::FLOOD:
+            {
+                return "FLOOD";
+            }
+            case ActionType::DRAIN:
+            {
+                return "DRAIN";
+            }
+            case ActionType::DISCONNECT:
+            {
+                return "DISCONNECT";
+            }
+            default:
+            {
+                return "ERROR";
+            }
+        }
+    }
+
     // Data members.
     ActionType type;
 

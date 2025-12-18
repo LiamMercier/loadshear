@@ -24,7 +24,8 @@ public:
     dispatch_timer_(cntx_),
     actions_(std::move(actions)),
     config_(std::move(config)),
-    payload_manager_(std::make_shared<PayloadManager>(payloads, counter_steps))
+    payload_manager_(std::make_shared<PayloadManager>(std::move(payloads),
+                                                      std::move(counter_steps)))
     {
         // Try to create shards.
         shards_.reserve(config_.shard_count);

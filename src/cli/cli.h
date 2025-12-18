@@ -19,6 +19,9 @@ private:
     template <typename Session>
     int start_orchestrator_loop(ExecutionPlan<Session> plan);
 
+    template <typename Session>
+    void dry_run(const ExecutionPlan<Session> & plan);
+
 private:
     const CLIOptions cli_ops_;
 

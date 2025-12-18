@@ -63,7 +63,13 @@ int CLI::execute_script(const DSLData & script)
             ExecutionPlan<TCPSession> plan = *plan_tmp;
 
             // Now, start the program's main loop.
-            return start_orchestrator_loop(plan);
+            if (cli_ops_.dry_run)
+            {
+                dry_run(plan);
+                return 0;
+            }
+
+            return start_orchestrator_loop(std::move(plan));
         }
         // Error in script protocol.
         default:
@@ -87,9 +93,9 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
     try
     {
         Orchestrator<Session> orchestrator(plan.actions,
-                                       plan.payloads,
-                                       plan.counter_steps,
-                                       plan.config);
+                                           plan.payloads,
+                                           plan.counter_steps,
+                                           plan.config);
 
         orchestrator.start();
     }
@@ -103,4 +109,66 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
     }
 
     return 0;
+}
+
+// Create a string [MM:SS:mmm] to display the time offset.
+std::string ms_to_timestring(uint32_t offset_ms)
+{
+    // Minutes, seconds, milliseconds
+    uint32_t minutes = offset_ms / 60000;
+    uint32_t seconds = (offset_ms % 60000) / 1000;
+    uint32_t milliseconds = offset_ms % 1000;
+
+    std::string min_str = std::to_string(minutes);
+    std::string sec_str = std::to_string(seconds);
+    std::string milli_str = std::to_string(milliseconds);
+
+    if (min_str.size() < 2)
+    {
+        min_str = "0" + min_str;
+    }
+
+    if (sec_str.size() < 2)
+    {
+        sec_str = "0" + sec_str;
+    }
+
+    if (milli_str.size() == 1)
+    {
+        milli_str = "00" + milli_str;
+    }
+    else if (milli_str.size() == 2)
+    {
+        milli_str = "0" + milli_str;
+    }
+
+    std::string res = "["
+                      + min_str
+                      + ":"
+                      + sec_str
+                      + ":"
+                      + milli_str
+                      + "] ";
+    return res;
+}
+
+template <typename Session>
+void CLI::dry_run(const ExecutionPlan<Session> & plan)
+{
+    Logger::info("[00:00:000] \033[1mStarting dry run\033[0m");
+
+    uint32_t current_offset = 0;
+
+    for (const auto & action : plan.actions)
+    {
+        current_offset += action.offset.count();
+
+        // TODO: print what the action does with a timestamp
+        std::string action_msg = ms_to_timestring(current_offset)
+                                 + action.type_to_string()
+                                 + " ";
+
+        Logger::info(std::move(action_msg));
+    }
+
 }
