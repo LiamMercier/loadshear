@@ -502,13 +502,13 @@ EXPECT_PLAN_EQ(const ExecutionPlan<Session> & expected,
                             + std::to_string(e_config_s.loop_payloads)
                             + "}"
                             + " Actual: {"
-                            + std::to_string(e_config_s.header_size)
+                            + std::to_string(a_config_s.header_size)
                             + " "
-                            + std::to_string(e_config_s.payload_size_limit)
+                            + std::to_string(a_config_s.payload_size_limit)
                             + " "
-                            + std::to_string(e_config_s.read_messages)
+                            + std::to_string(a_config_s.read_messages)
                             + " "
-                            + std::to_string(e_config_s.loop_payloads)
+                            + std::to_string(a_config_s.loop_payloads)
                             + "}";
         issues.push_back(issue);
     }

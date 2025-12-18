@@ -138,7 +138,7 @@ int CLI::execute_script(const DSLData & script)
             // Now, start the program's main loop.
             if (cli_ops_.dry_run)
             {
-                dry_run(plan, script);
+                dry_run(std::move(plan), std::move(script));
                 return 0;
             }
 
@@ -190,7 +190,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
 {
     const auto & actions_dsl = data.orchestrator.actions;
 
-    Logger::info("[00:00:000] \033[1mStarting dry run\033[0m");
+    Logger::info("            \033[1mStarting dry run\033[0m");
 
     uint32_t current_offset = 0;
     size_t current_payload_id = 0;

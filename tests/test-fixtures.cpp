@@ -308,8 +308,11 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
             payload_desc.ops.push_back(std::move(packet_op));
         }
 
-        plan.counter_steps.push_back(0);
-        plan.payloads.push_back(std::move(payload_desc));
+        for (int i = 0; i < 5; i++)
+        {
+            plan.counter_steps.push_back(0);
+            plan.payloads.push_back(payload_desc);
+        }
     }
 
     // SEND 0:100 p1 COPIES 5 COUNTER 0:8 "little":1 OFFSET 200ms
@@ -338,8 +341,11 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
             payload_desc.ops.push_back(std::move(packet_op));
         }
 
-        plan.counter_steps.push_back(1);
-        plan.payloads.push_back(std::move(payload_desc));
+        for (int i = 0; i < 5; i++)
+        {
+            plan.counter_steps.push_back(1);
+            plan.payloads.push_back(payload_desc);
+        }
     }
 
     // SEND 0:100 p1 COPIES 1

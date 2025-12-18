@@ -347,9 +347,18 @@ generate_execution_plan(const DSLData & script,
                         // contiguous access during runtime at the
                         // cost of a few bytes.
                         //
+                        // These are cheap descriptors, so we just dupe them
+                        // because even at 1 million payloads (gross misuse)
+                        // we would only have ~230 MiB of data.
+                        //
+                        // Users can reduce this by simply enabling looping.
+                        //
                         // See packets/payload-manager.cpp
-                        plan.counter_steps.push_back(0);
-                        plan.payloads.push_back(std::move(payload));
+                        for (size_t i = 0; i < action.count; i++)
+                        {
+                            plan.counter_steps.push_back(0);
+                            plan.payloads.push_back(payload);
+                        }
                         break;
                     }
 
@@ -462,8 +471,12 @@ generate_execution_plan(const DSLData & script,
                         payload.ops.push_back(std::move(identity));
                     }
 
-                    plan.counter_steps.push_back(last_counter_step);
-                    plan.payloads.push_back(std::move(payload));
+                    // See prior discussion on why we duplicate here.
+                    for (size_t i = 0; i < action.count; i++)
+                    {
+                        plan.counter_steps.push_back(last_counter_step);
+                        plan.payloads.push_back(payload);
+                    }
 
                     break;
                 }
