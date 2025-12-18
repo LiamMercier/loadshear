@@ -20,7 +20,8 @@ private:
     int start_orchestrator_loop(ExecutionPlan<Session> plan);
 
     template <typename Session>
-    void dry_run(const ExecutionPlan<Session> & plan);
+    void dry_run(const ExecutionPlan<Session> & plan,
+                 const DSLData & data);
 
 private:
     const CLIOptions cli_ops_;
