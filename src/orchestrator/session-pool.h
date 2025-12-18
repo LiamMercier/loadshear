@@ -12,7 +12,7 @@
 #include "session-config.h"
 
 #ifdef DEV_BUILD
-#include <iostream>
+#include "logger.h"
 #endif
 
 namespace asio = boost::asio;
@@ -62,6 +62,21 @@ public:
     SessionPool & operator=(const SessionPool &) = delete;
     SessionPool(SessionPool &&) = delete;
     SessionPool & operator=(SessionPool &&) = delete;
+
+    void shutdown()
+    {
+        bool expected = false;
+
+        if (closed_.compare_exchange_strong(expected, true))
+        {
+            stop_all_sessions();
+
+            if (active_sessions_ == 0)
+            {
+                notify_closed_();
+            }
+        }
+    }
 
     template<typename... Args>
     bool create_sessions(size_t session_count, Args&&... args)
@@ -179,35 +194,16 @@ public:
     }
 
 private:
-
     // TODO: perhaps send back analytics here? But, if we want live analytics, need something else.
     void disconnect_callback()
     {
         active_sessions_ -= 1;
 
-        if (active_sessions_ == 0)
+        if (active_sessions_ == 0 && closed_)
         {
             // Handle anything that should happen when all sessions are done.
-            //
-            // This should not be synchronous with the callback.
-            bool expected = false;
-            if(closed_.compare_exchange_strong(expected, true))
-            {
-                notify_closed_();
-                return;
-            }
-
-
-// Warn anyone who compiled a debug version of the code.
-#ifdef DEV_BUILD
-// TODO <feature>: replace with logger.
-            else
-            {
-                std::cout << "SessionPool had two disconnect callbacks at 0 active sessions!\n";
-            }
-#endif
-
-
+            notify_closed_();
+            return;
         }
     }
 
