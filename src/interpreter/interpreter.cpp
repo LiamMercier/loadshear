@@ -926,30 +926,6 @@ ParseResult Interpreter::verify_script()
             }
             case ActionType::DRAIN:
             {
-                // We should have a positive timeout.
-                if (action.count == 0)
-                {
-                    std::string e_msg = styled_string("DRAIN",
-                                                      PrintStyle::Keyword)
-                                        + " "
-                                        + styled_string("[action "
-                                            + std::to_string(i)
-                                            + "]",
-                                            PrintStyle::Reference)
-                                        + " has "
-                                        + styled_string("TIMEOUT",
-                                                        PrintStyle::BadField)
-                                        + " set to "
-                                        + styled_string("0",
-                                                        PrintStyle::BadValue)
-                                        + styled_string(
-                                            " and would immediately "
-                                            "evict sessions. Use "
-                                            "DISCONNECT if this is desired.",
-                                            PrintStyle::Context);
-                    return arbitrary_error(std::move(e_msg));
-                }
-
                 // Check the action is in range.
                 if (action.range.second > pool_size)
                 {

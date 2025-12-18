@@ -534,38 +534,6 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             {
                 return range_res;
             }
-
-            // Grab timeout if it exists.
-            if (peek().text == "TIMEOUT")
-            {
-                consume();
-
-                // See if the next token is a Value token.
-                if (!is_expected(TokenType::Value))
-                {
-                    Token temp = peek();
-                    return bad_type_error(temp, TokenType::Value);
-                }
-
-                // Save the timeout value.
-                Token timeout_token = consume();
-
-                ParseResult time_res = try_parse_time(timeout_token, action.count);
-
-                // Check the result was good.
-                if (!time_res.success)
-                {
-                    return time_res;
-                }
-
-                // All fields for drain are done besides OFFSET done at the end of this block.
-            }
-            // Otherwise, set to default if nothing was specified.
-            else
-            {
-                action.count = DEFAULT_TIMEOUT_MS;
-            }
-
         }
         else if (t_action.text == "DISCONNECT")
         {

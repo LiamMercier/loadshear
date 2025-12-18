@@ -120,7 +120,7 @@ ORCHESTRATOR my_settings {
     // Session's which have FLOOD called on them will continue
     // to send until this loop of the payloads has been finished,
     // but another loop will not be started.
-    DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
+    DRAIN 0:100 OFFSET 500ms
 
     // Forcibly disconnect all sessions 15 seconds after DRAIN.
     // This command is pointless here since the timeout will already do this,

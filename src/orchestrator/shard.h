@@ -114,7 +114,8 @@ private:
     {
         try
         {
-            // Make our message handler with whatever the Orchestrator decided we should use.
+            // Make our message handler with whatever the Orchestrator
+            // decided we should use.
             message_handler_ = handler_factory_();
 
             // Start the thread's work loop.

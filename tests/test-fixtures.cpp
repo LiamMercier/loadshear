@@ -172,15 +172,13 @@ DSLData get_simple_valid_script_data()
             orchestrator.actions.push_back(action_flood);
         }
 
-        // DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
+        // DRAIN 0:100 OFFSET 500ms
         {
             Action action_drain;
 
             action_drain.type = ActionType::DRAIN;
             action_drain.range = {0, 100};
             action_drain.offset_ms = 500;
-
-            action_drain.count = 10000;
 
             orchestrator.actions.push_back(action_drain);
         }

@@ -49,8 +49,6 @@ struct ActionDescriptor
     uint32_t sessions_end;
 
     // For SEND to specify copies.
-    //
-    // For DRAIN, this defines the seconds until we force stop.
     uint32_t count;
 
     // Record the timepoint offset for our orchestrator's timer loop.

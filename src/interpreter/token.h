@@ -28,8 +28,7 @@ const std::unordered_set<std::string> VALID_KEYWORDS {
     "COPIES",
     "TIMESTAMP",
     "COUNTER",
-    "FORMAT",
-    "TIMEOUT"
+    "FORMAT"
 };
 
 enum class TokenType : uint8_t

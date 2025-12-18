@@ -267,8 +267,7 @@ inline bool actions_equal(Action a, Action b)
 
     // Check count if relevant.
     if (a.type == ActionType::CREATE
-        || a.type == ActionType::SEND
-        || a.type == ActionType::DRAIN)
+        || a.type == ActionType::SEND)
     {
         if (a.count != b.count)
         {
@@ -568,8 +567,7 @@ EXPECT_PLAN_EQ(const ExecutionPlan<Session> & expected,
         }
 
         if (e_act.type == a_act.type
-            && (e_act.type == ActionType::SEND
-                || e_act.type == ActionType::DRAIN))
+            && e_act.type == ActionType::SEND)
         {
             if (e_act.count != a_act.count)
             {
