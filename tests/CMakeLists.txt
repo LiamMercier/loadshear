@@ -23,6 +23,9 @@ target_link_libraries(unit-tests PRIVATE
     cli
 )
 
+# wasmtime has an unused variable that we have errors on in release.
+target_compile_options(unit-tests PRIVATE -Wno-all)
+
 include(GoogleTest)
 
 gtest_discover_tests(unit-tests

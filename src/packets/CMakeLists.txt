@@ -11,3 +11,6 @@ target_link_libraries(packets PRIVATE
     Boost::system
     wasmtime
 )
+
+# wasmtime has an unused variable that we have errors on in release.
+target_compile_options(packets PRIVATE -Wno-all)

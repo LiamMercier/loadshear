@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(Stressor CXX)
+project(Loadshear CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,6 +46,9 @@ add_subdirectory(src/transports)
 add_subdirectory(src/orchestrator)
 add_subdirectory(src/interpreter)
 add_subdirectory(src/resolver)
-add_subdirectory(tests)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(src/cli)

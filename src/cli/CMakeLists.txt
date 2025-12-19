@@ -19,6 +19,9 @@ target_link_libraries(cli PUBLIC
     wasmtime
 )
 
+# wasmtime has an unused variable that we have errors on in release.
+target_compile_options(cli PRIVATE -Wno-all)
+
 add_executable(loadshear
     main.cpp
 )

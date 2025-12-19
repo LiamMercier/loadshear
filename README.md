@@ -1,4 +1,4 @@
-# stressor
+# Loadshear
 
 ## about
 
@@ -34,10 +34,22 @@ sudo apt install rustup
 rustup default stable
 ```
 
-Compile the binary, running test cases after compilation
+Compile the binary
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Debug -B builds -S . && cmake --build builds && ctest --test-dir ./builds/
+cmake --preset release && cmake --build --preset release-multi
+```
+
+For debugging, use
+
+```
+cmake --preset debug && cmake --build --preset debug-multi
+```
+
+To run all tests with ctest, set ulimit to a high enough value (~12000) and run
+
+```
+ctest --preset debug-heavy
 ```
 
 ## Defining the packet response protocol
