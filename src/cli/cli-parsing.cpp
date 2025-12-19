@@ -18,12 +18,18 @@ CLIParseResult parse_cli(int argc, char** argv)
         ("script,s",
          po::value<std::string>(&cli_ops.script_file),
          "Path to your script.")
-        ("dry-run,dry,d",
-         po::bool_switch(&cli_ops.dry_run)->default_value(false),
+        ("dry-run,d",
+         po::bool_switch(&cli_ops.dry_run)
+                          ->default_value(false),
          "Show runtime plan generated from your script and options.")
         ("expand-envs,e",
-         po::bool_switch(&cli_ops.expand_envs)->default_value(false),
+         po::bool_switch(&cli_ops.expand_envs)
+                          ->default_value(false),
          "Expand environment variables in script paths.")
+        ("acknowledge",
+         po::bool_switch(&cli_ops.acknowledged_responsibility)
+                          ->default_value(false),
+         "Automatically acknowledge legal responsibility.")
         ("arena-init-mb",
          po::value<uint64_t>(&cli_ops.arena_init_mb),
          "Initial size of arena allocator for packet data.");

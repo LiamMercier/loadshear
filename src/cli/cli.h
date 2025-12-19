@@ -23,6 +23,8 @@ private:
     void dry_run(const ExecutionPlan<Session> & plan,
                  const DSLData & data);
 
+    bool request_acknowledgement(std::string endpoints_list);
+
 private:
     const CLIOptions cli_ops_;
 

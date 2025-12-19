@@ -6,8 +6,9 @@
 struct CLIOptions
 {
     std::string script_file;
-    bool dry_run;
-    bool expand_envs;
+    bool dry_run{false};
+    bool expand_envs{false};
+    bool acknowledged_responsibility{false};
     uint64_t arena_init_mb{0};
 };
 

@@ -25,6 +25,10 @@ struct ExecutionPlan
     {
     }
 
+    std::string dump_endpoint_list();
+
+public:
+
     // Actions to feed into the orchestrator.
     std::vector<ActionDescriptor> actions;
 

@@ -516,6 +516,33 @@ generate_execution_plan(const DSLData & script,
     else
     {
         static_assert(always_false<Session>,
-                      "generate_execution_plan() not implemented for this type!");
+                      "generate_execution_plan() not "
+                      "implemented for this type!");
+    }
+}
+
+template std::string ExecutionPlan<TCPSession>::dump_endpoint_list();
+
+template<typename Session>
+inline std::string ExecutionPlan<Session>::dump_endpoint_list()
+{
+    if constexpr (std::is_same_v<Session, TCPSession>)
+    {
+        std::string endpoint_list;
+
+        for (const auto & ep : config.host_info.endpoints)
+        {
+            endpoint_list += "  - ";
+            endpoint_list += ep.address().to_string();
+            endpoint_list += "\n";
+        }
+
+        return endpoint_list;
+    }
+    else
+    {
+        static_assert(always_false<Session>,
+                      "generate_execution_plan() not "
+                      "implemented for this type!");
     }
 }

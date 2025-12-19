@@ -135,13 +135,27 @@ int CLI::execute_script(const DSLData & script)
 
             ExecutionPlan<TCPSession> plan = *plan_tmp;
 
-            // Now, start the program's main loop.
+            // If we have dry_run set, do this and exit.
             if (cli_ops_.dry_run)
             {
-                dry_run(std::move(plan), std::move(script));
+                dry_run(plan, script);
                 return 0;
             }
 
+            bool ack = false;
+
+            // Ensure the user knows what is about to happen.
+            if (!cli_ops_.acknowledged_responsibility)
+            {
+                ack = request_acknowledgement(plan.dump_endpoint_list());
+            }
+
+            if (!ack)
+            {
+                return 0;
+            }
+
+            // Now, start the program's main loop
             return start_orchestrator_loop(std::move(plan));
         }
         // Error in script protocol.
@@ -289,4 +303,41 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
         Logger::info(std::move(action_msg));
     }
 
+}
+
+std::string_view ACKNOWLEDGEMENT_STRING_START =
+            "\n"
+            "\033[1;31mWARNING:\033[0m\n"
+            "This tool can generate high network loads, rapid connection\n"
+            "churn, and resource exhaustion if misused.\n"
+            "\n"
+            "The following endpoints are set to be used:\n";
+
+std::string_view ACKNOWLEDGEMENT_STRING_END =
+            "You \033[1mMUST\033[0m have explicit authorization to act "
+                "on these systems.\n"
+            "Unauthorized use of this tool can cause service disruption\n"
+            "and may be illegal.\n"
+            "\n"
+            "If you are unsure whether you are authorized, stop now.\n"
+            "\n"
+            "By proceeding, you confirm that you:\n"
+            " - Are authorized to act on these endpoints\n"
+            " - Understand the behavior of this tool for your script\n"
+            " - Accept full responsibility for its use\n"
+            "\n"
+            "To proceed, type \033[1mI UNDERSTAND\033[0m below.\n";
+
+// Ensure the user knows what will happen before running.
+bool CLI::request_acknowledgement(std::string endpoints_list)
+{
+    Logger::info(std::string(ACKNOWLEDGEMENT_STRING_START));
+
+    Logger::info(endpoints_list);
+
+    Logger::info(std::string(ACKNOWLEDGEMENT_STRING_END));
+
+    // TODO: we will grab the user's response and check it is exactly equal.
+
+    return false;
 }
