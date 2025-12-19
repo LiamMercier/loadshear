@@ -7,6 +7,8 @@
 
 #include "all-transports.h"
 
+#include <iostream>
+
 //
 // Helpers
 //
@@ -184,6 +186,8 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
                                            plan.counter_steps,
                                            plan.config);
 
+        Logger::info("\nStarting orchestrator loop");
+
         orchestrator.start();
     }
     catch (const std::exception & error)
@@ -233,7 +237,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
                 action_msg += "sessions indexed "
                               + std::to_string(action.sessions_start)
                               + " through "
-                              + std::to_string(action.sessions_end);
+                              + std::to_string(action.sessions_end - 1);
                 break;
             }
             case ActionType::SEND:
@@ -275,7 +279,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
                 action_msg += "sessions indexed "
                               + std::to_string(action.sessions_start)
                               + " through "
-                              + std::to_string(action.sessions_end);
+                              + std::to_string(action.sessions_end - 1);
                 break;
             }
             case ActionType::DRAIN:
@@ -283,7 +287,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
                 action_msg += "sessions indexed "
                               + std::to_string(action.sessions_start)
                               + " through "
-                              + std::to_string(action.sessions_end);
+                              + std::to_string(action.sessions_end - 1);
                 break;
             }
             case ActionType::DISCONNECT:
@@ -291,7 +295,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
                 action_msg += "sessions indexed "
                               + std::to_string(action.sessions_start)
                               + " through "
-                              + std::to_string(action.sessions_end);
+                              + std::to_string(action.sessions_end - 1);
                 break;
             }
             default:
@@ -337,7 +341,14 @@ bool CLI::request_acknowledgement(std::string endpoints_list)
 
     Logger::info(std::string(ACKNOWLEDGEMENT_STRING_END));
 
-    // TODO: we will grab the user's response and check it is exactly equal.
+    std::string user_response;
+    std::getline(std::cin, user_response);
 
+    if (user_response == "I UNDERSTAND")
+    {
+        return true;
+    }
+
+    Logger::info("\nAborting");
     return false;
 }
