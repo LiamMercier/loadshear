@@ -107,6 +107,9 @@ generate_execution_plan(const DSLData & script,
 
         tcp::resolver ip_resolver(temp_cntx);
 
+        // Remove duplicate endpoints.
+        std::unordered_set<typename Session::Endpoint> endpoint_dupes;
+
         for (const auto & endpoint : settings.endpoints)
         {
             boost::system::error_code ec;
@@ -129,7 +132,13 @@ generate_execution_plan(const DSLData & script,
             // Store results in host info.
             for (const auto & entry : results)
             {
+                if (endpoint_dupes.contains(entry))
+                {
+                    continue;
+                }
+
                 host_data.endpoints.push_back(entry.endpoint());
+                endpoint_dupes.insert(entry);
             }
         }
 
