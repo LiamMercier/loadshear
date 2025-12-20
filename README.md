@@ -1,60 +1,22 @@
 # Loadshear
 
-## about
-
 TODO: about
 
 ## table of contents
 
 TODO: table of contents
 
-TODO: split this readme into Users and Developers for ease of navigation
+## Installation
 
-## Compiling
+TODO: installation guide (should be simple when done).
 
-Download build tools and libraries
+## Quickstart
 
-```
-sudo apt install build-essential cmake libboost-all-dev
-```
-
-Download Wasmtime
-
-```
-https://github.com/bytecodealliance/wasmtime
-```
-
-Download a compatible rust version for compiling wasmtime.
-
-```
-sudo apt install rustup
-```
-
-```
-rustup default stable
-```
-
-Compile the binary
-
-```
-cmake --preset release && cmake --build --preset release-multi
-```
-
-For debugging, use
-
-```
-cmake --preset debug && cmake --build --preset debug-multi
-```
-
-To run all tests with ctest, set ulimit to a high enough value (~12000) and run
-
-```
-ctest --preset debug-heavy
-```
+TODO: quickstart
 
 ## Defining the packet response protocol
 
-The application assumes that packets are started with a fixed size header that contains the body size of the packet. For example, a packet might have the first 8 bytes as HeaderType:BodySize and then the rest as the body.
+The application assumes that packets are started with a fixed size header containing the body size of the packet. For example, a packet might have the first 8 bytes defining the packet type and body length, and then the body.
 
 If your protocol uses variable sized headers, you must declare the header size to be the first N bytes and make sure that this will always contain the size field.
 
@@ -141,7 +103,53 @@ wasm-strip <YOUR_CODE>.wasm
 
 TODO: show a respond heartbeat example
 
-## Running tests
+## Development
+
+The following documents useful information for developers or power users who wish to do local compilation of Loadshear.
+
+### Compiling
+
+Download build tools and libraries
+
+```
+sudo apt install build-essential cmake libboost-all-dev
+```
+
+Download Wasmtime
+
+```
+https://github.com/bytecodealliance/wasmtime
+```
+
+Download a compatible rust version for compiling wasmtime.
+
+```
+sudo apt install rustup
+```
+
+```
+rustup default stable
+```
+
+Compile the binary for release
+
+```
+cmake --preset release && cmake --build --preset release-multi
+```
+
+For debugging, use
+
+```
+cmake --preset debug && cmake --build --preset debug-multi
+```
+
+To run all tests with ctest, set ulimit to a high enough value (~12000) and run
+
+```
+ctest --preset debug-heavy
+```
+
+### Running tests
 
 The tests rely on .wasm files to run. If you do not wish to use the provided binary files, feel free to compile them yourself using the examples in the sdk directory.
 
