@@ -6,6 +6,8 @@
 // for memcpy
 #include <cstring>
 
+#include "logger.h"
+
 WASMMessageHandler::WASMMessageHandler(std::shared_ptr<wasmtime::Engine> engine,
                                        std::shared_ptr<wasmtime::Module> module)
 :engine_(std::move(engine)),
@@ -129,7 +131,9 @@ store_(*engine_)
 
             if (input_index == 0)
             {
-                std::cout << "Bad allocation detected for header\n";
+                std::string e_string = "Bad allocation detected for header";
+
+                Logger::warn(std::move(e_string));
 
                 dealloc_->call(store_,
                                {static_cast<int32_t>(input_index),
@@ -144,8 +148,12 @@ store_(*engine_)
             if (static_cast<uint64_t>(input_index) + static_cast<uint64_t>(input_length)
             > mem_view.size())
             {
-                std::cout << "OOB behavior detected during header input buffer write. "
-                          << "Your WASM script violates the contract.\n";
+                std::string e_string = "OOB behavior detected during "
+                                       "header input buffer write. "
+                                       "Your WASM script violates "
+                                       "the contract.";
+
+                Logger::warn(std::move(e_string));
 
                 dealloc_->call(store_,
                                {static_cast<int32_t>(input_index),
@@ -168,8 +176,11 @@ store_(*engine_)
             if (signed_size < 0)
             {
                 // Handle bad sizes
-                std::cout << "handle_header returned a negative size. "
-                          << "Your WASM script violates the contract.\n";
+                std::string e_string = "handle_header returned a negative "
+                                       "size. Your WASM script violates "
+                                       "the contract.";
+
+                Logger::warn(std::move(e_string));
 
                 dealloc_->call(store_,
                                {static_cast<int32_t>(input_index),
@@ -189,8 +200,12 @@ store_(*engine_)
         }
         catch (...)
         {
-            std::cout << "Exception during header input buffer write. "
-                      << "Your WASM script violates the contract.\n";
+            std::string e_string = "Exception during header input buffer "
+                                   "write. Your WASM script violates "
+                                   "the contract.";
+
+            Logger::warn(std::move(e_string));
+
             return {0, HeaderResult::Status::ERROR};
         }
     });
@@ -219,8 +234,9 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
         // Bad allocation if index is zero.
         if (input_index == 0 && input_length != 0)
         {
-            // TODO: log with a log level? Also, remove \n if we do.
-            std::cout << "Bad allocation detected for body\n";
+            std::string e_msg = "Bad allocation detected for body";
+
+            Logger::warn(std::move(e_msg));
 
             dealloc_->call(store_,
                            {static_cast<int32_t>(input_index),
@@ -238,9 +254,11 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
         if (static_cast<uint64_t>(input_index) + static_cast<uint64_t>(input_length)
             > mem_view.size())
         {
-            // TODO: log?
-            std::cout << "OOB behavior detected during input buffer write. "
-                      << "Your WASM script violates the contract.\n";
+            std::string e_msg = "OOB behavior detected during input "
+                                "buffer write. Your WASM script "
+                                "violates the contract.";
+
+            Logger::warn(std::move(e_msg));
 
             dealloc_->call(store_,
                            {static_cast<int32_t>(input_index),
@@ -282,9 +300,11 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
             if (static_cast<uint64_t>(out_index) + static_cast<uint64_t>(out_length)
                 > mem_view.size())
             {
-                // TODO: log?
-                std::cout << "OOB behavior detected during response buffer read. "
-                          << "Your WASM script violates the contract.\n";
+                std::string e_msg = "OOB behavior detected during response "
+                                    "buffer read. Your WASM script violates "
+                                    "the contract.";
+
+                Logger::warn(std::move(e_msg));
 
                 dealloc_->call(store_,
                                {static_cast<int32_t>(out_index),
@@ -320,14 +340,22 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
     }
     catch (const wasmtime::Trap & error)
     {
-        std::cerr << "WASM Trap: " << error.message() << "\n";
+        std::string e_string = "WASM Trap during packet processing: "
+                               + std::string(error.message());
+
+        Logger::warn(std::move(e_string));
+
         auto vec = std::make_shared<std::vector<uint8_t>>();
         callback({std::move(vec)});
         return;
     }
     catch (const std::exception & error)
     {
-        std::cerr << "WASM exception: " << error.what() << "\n";
+        std::string e_string = "WASM exception during packet processing: "
+                               + std::string(error.what());
+
+        Logger::warn(std::move(e_string));
+
         auto vec = std::make_shared<std::vector<uint8_t>>();
         callback({std::move(vec)});
         return;
@@ -343,8 +371,12 @@ HeaderResult WASMMessageHandler::parse_header(std::span<const uint8_t> buffer) c
     }
     else
     {
-        std::cout << "No header parse function was found! Either provide a WASM "
-                  << "handle_header export or provide byte fields to read in config!\n";
+        std::string e_string = "No header parse function was found! Either "
+                               "provide a WASM handle_header export or "
+                               "provide byte fields to read in config!";
+
+        Logger::warn(std::move(e_string));
+
         return {0, HeaderResult::Status::ERROR};
     }
 }

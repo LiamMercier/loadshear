@@ -4,6 +4,8 @@
 
 #include <boost/program_options.hpp>
 
+#include "logger.h"
+
 namespace po = boost::program_options;
 
 CLIParseResult parse_cli(int argc, char** argv)
@@ -62,10 +64,14 @@ CLIParseResult parse_cli(int argc, char** argv)
     }
     catch (const po::error & p_err)
     {
-        std::cerr << "Error: " << p_err.what() << "\n";
+        std::string e_string = "Error: "
+                               + std::string(p_err.what());
+        Logger::error(std::move(e_string));
+
         res.status = CLIParseResult::ParseStatus::Error;
         return res;
     }
 
+    res.status = CLIParseResult::ParseStatus::Ok;
     return res;
 }

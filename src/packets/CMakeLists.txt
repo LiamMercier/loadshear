@@ -8,6 +8,7 @@ target_include_directories(packets PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories(packets PUBLIC wasmtime)
 
 target_link_libraries(packets PRIVATE
+    logger
     Boost::system
     wasmtime
 )
