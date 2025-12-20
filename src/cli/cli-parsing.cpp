@@ -32,6 +32,10 @@ CLIParseResult parse_cli(int argc, char** argv)
          po::bool_switch(&cli_ops.acknowledged_responsibility)
                           ->default_value(false),
          "Automatically acknowledge legal responsibility.")
+        ("quiet",
+         po::bool_switch(&cli_ops.quiet)
+                          ->default_value(false),
+         "Only show warnings/errors after acknowledgement")
         ("arena-init-mb",
          po::value<uint64_t>(&cli_ops.arena_init_mb),
          "Initial size of arena allocator for packet data.");

@@ -85,6 +85,11 @@ void Logger::worker_loop()
         // Drop the lock, process the messages now.
         for (const auto & entry : processing_queue)
         {
+            if (entry.level < level_)
+            {
+                continue;
+            }
+
             std::cout << log_prefix[static_cast<size_t>(entry.level)]
                       << entry.msg
                       << "\n";

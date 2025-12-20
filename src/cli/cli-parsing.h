@@ -9,6 +9,7 @@ struct CLIOptions
     bool dry_run{false};
     bool expand_envs{false};
     bool acknowledged_responsibility{false};
+    bool quiet{false};
     uint64_t arena_init_mb{0};
 };
 

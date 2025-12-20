@@ -13,6 +13,8 @@ public:
 
     int run();
 
+    // TODO: sigint() or interrupt() for handling ctrl-c from user.
+
 private:
     int execute_script(const DSLData & script);
 

@@ -151,10 +151,20 @@ int CLI::execute_script(const DSLData & script)
             {
                 ack = request_acknowledgement(plan.dump_endpoint_list());
             }
+            else
+            {
+                ack = true;
+            }
 
             if (!ack)
             {
                 return 0;
+            }
+
+            // Disable output besides warnings after showing disclaimer.
+            if (cli_ops_.quiet)
+            {
+                Logger::set_level(LogLevel::WARN);
             }
 
             // Now, start the program's main loop

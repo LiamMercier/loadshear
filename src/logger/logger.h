@@ -48,6 +48,11 @@ public:
     // Called at end of main.
     static void shutdown();
 
+    static void set_level(LogLevel level)
+    {
+        instance().level_ = level;
+    }
+
     static bool should_log(LogLevel level)
     {
         return level >= instance().level_;
