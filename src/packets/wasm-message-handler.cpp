@@ -232,15 +232,11 @@ void WASMMessageHandler::parse_message(std::span<const uint8_t> header,
         uint32_t input_index = alloc_res[0].i32();
 
         // Bad allocation if index is zero.
-        if (input_index == 0 && input_length != 0)
+        if (input_index == 0)
         {
             std::string e_msg = "Bad allocation detected for body";
 
             Logger::warn(std::move(e_msg));
-
-            dealloc_->call(store_,
-                           {static_cast<int32_t>(input_index),
-                            static_cast<int32_t>(input_length)}).unwrap();
 
             callback({ std::make_shared<std::vector<uint8_t>>() });
             return;
