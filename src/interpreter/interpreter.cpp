@@ -261,9 +261,18 @@ ParseResult Interpreter::verify_script()
     // Check that at least one packet was defined.
     if (settings.packet_identifiers.empty())
     {
-        std::string e_msg = styled_string("SETTINGS", PrintStyle::BadField)
-                            + " block has no packets defined";
-        return arbitrary_error(std::move(e_msg));
+        // Only exception is if we never use SEND in the script.
+        for (const auto & action : script_.orchestrator.actions)
+        {
+            if (action.type == ActionType::SEND)
+            {
+                std::string e_msg = styled_string("SETTINGS",
+                                                  PrintStyle::BadField)
+                                                  + " block has no packets "
+                                                    "defined";
+                return arbitrary_error(std::move(e_msg));
+            }
+        }
     }
 
     // Check that we can resolve each packet.
