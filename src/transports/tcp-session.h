@@ -44,6 +44,7 @@ class TCPSession : public std::enable_shared_from_this<TCPSession>
 {
 public:
     using tcp = asio::ip::tcp;
+    using Endpoint = tcp::endpoint;
     using Endpoints = std::vector<tcp::endpoint>;
 
     using DisconnectCallback = std::function<void()>;

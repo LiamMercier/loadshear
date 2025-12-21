@@ -8,6 +8,7 @@
 #include <boost/asio.hpp>
 
 #include "script-structs.h"
+#include "execution-plan.h"
 
 namespace asio = boost::asio;
 
@@ -230,6 +231,7 @@ inline std::string dump_DSL_data(const DSLData & data)
     data_str << "SETTINGS : {\n"
              << "id: " << data.settings.identifier << " "
              << "SESSION: " << data.settings.session_protocol << "\n"
+             << "PORT: " << data.settings.port << "\n"
              << "HEADERSIZE: " << data.settings.header_size << "\n"
              << "BODYMAX: " << data.settings.body_max << " "
              << "READ: " << data.settings.read << " "
@@ -265,8 +267,7 @@ inline bool actions_equal(Action a, Action b)
 
     // Check count if relevant.
     if (a.type == ActionType::CREATE
-        || a.type == ActionType::SEND
-        || a.type == ActionType::DRAIN)
+        || a.type == ActionType::SEND)
     {
         if (a.count != b.count)
         {
@@ -313,6 +314,11 @@ inline void EXPECT_DSL_EQ(const DSLData & expected,
     }
     else if (expected.settings.session_protocol
              != actual.settings.session_protocol)
+    {
+        fail = true;
+    }
+    else if (expected.settings.port
+             != actual.settings.port)
     {
         fail = true;
     }
@@ -405,4 +411,303 @@ inline void EXPECT_DSL_EQ(const DSLData & expected,
                       << "\n\nActual: "
                       << dump_DSL_data(actual);
     }
+}
+
+inline std::string op_type_to_string(PacketOperationType type)
+{
+    switch (type)
+    {
+        case PacketOperationType::IDENTITY:
+        {
+            return "IDENTITY";
+        }
+        case PacketOperationType::COUNTER:
+        {
+            return "COUNTER";
+        }
+        case PacketOperationType::TIMESTAMP:
+        {
+            return "TIMESTAMP";
+        }
+        default:
+        {
+            return "Error";
+        }
+    }
+}
+
+inline std::string time_format_to_string(TimestampFormat format)
+{
+    switch (format)
+    {
+        case TimestampFormat::Seconds:
+        {
+            return "Seconds";
+        }
+        case TimestampFormat::Milliseconds:
+        {
+            return "Milliseconds";
+        }
+        case TimestampFormat::Microseconds:
+        {
+            return "Microseconds";
+        }
+        case TimestampFormat::Nanoseconds:
+        {
+            return "Nanoseconds";
+        }
+        default:
+        {
+            return "Error";
+        }
+    }
+}
+
+template<typename Session>
+inline std::vector<std::string>
+EXPECT_PLAN_EQ(const ExecutionPlan<Session> & expected,
+               const ExecutionPlan<Session> & actual)
+{
+    std::vector<std::string> issues;
+
+    const auto & e_config = expected.config;
+    const auto & a_config = actual.config;
+
+    // First, compare shard count.
+    if (e_config.shard_count != a_config.shard_count)
+    {
+        std::string issue = "Shard counts differ! Expected: "
+                            + std::to_string(e_config.shard_count)
+                            + " Actual: "
+                            + std::to_string(a_config.shard_count);
+        issues.push_back(issue);
+    }
+
+    // Compare session configs.
+    const auto & e_config_s = e_config.session_config;
+    const auto & a_config_s = a_config.session_config;
+
+    if (e_config_s.header_size != a_config_s.header_size
+        ||  e_config_s.payload_size_limit != a_config_s.payload_size_limit
+        ||  e_config_s.read_messages != a_config_s.read_messages
+        ||  e_config_s.loop_payloads != a_config_s.loop_payloads)
+    {
+        std::string issue = "Session configs differ! Expected: {"
+                            + std::to_string(e_config_s.header_size)
+                            + " "
+                            + std::to_string(e_config_s.payload_size_limit)
+                            + " "
+                            + std::to_string(e_config_s.read_messages)
+                            + " "
+                            + std::to_string(e_config_s.loop_payloads)
+                            + "}"
+                            + " Actual: {"
+                            + std::to_string(a_config_s.header_size)
+                            + " "
+                            + std::to_string(a_config_s.payload_size_limit)
+                            + " "
+                            + std::to_string(a_config_s.read_messages)
+                            + " "
+                            + std::to_string(a_config_s.loop_payloads)
+                            + "}";
+        issues.push_back(issue);
+    }
+
+    // if (e_config.host_info != a_config.host_info)
+    // {
+    //     // TODO:
+    // }
+
+    if (expected.actions.size() != actual.actions.size())
+    {
+        std::string issue = "Action sizes differ! Expected "
+                            + std::to_string(expected.actions.size())
+                            + " Actual "
+                            + std::to_string(actual.actions.size());
+        issues.push_back(issue);
+    }
+
+    // Compare actions.
+    for (size_t i = 0; i < expected.actions.size(); i++)
+    {
+        if (i >= actual.actions.size())
+        {
+            break;
+        }
+
+        const auto & e_act = expected.actions[i];
+        const auto & a_act = actual.actions[i];
+
+        if (e_act.type != a_act.type
+            || e_act.sessions_start != a_act.sessions_start
+            || e_act.sessions_end != a_act.sessions_end
+            || e_act.offset != a_act.offset)
+        {
+            std::string issue = "Action "
+                                + std::to_string(i)
+                                + " had values not equal! Expected {"
+                                + action_type_to_string(e_act.type)
+                                + " "
+                                + std::to_string(e_act.sessions_start)
+                                + " "
+                                + std::to_string(e_act.sessions_end)
+                                + " "
+                                + std::to_string(e_act.offset.count())
+                                + "} Actual {"
+                                + action_type_to_string(a_act.type)
+                                + " "
+                                + std::to_string(a_act.sessions_start)
+                                + " "
+                                + std::to_string(a_act.sessions_end)
+                                + " "
+                                + std::to_string(a_act.offset.count())
+                                + "}";
+            issues.push_back(issue);
+            //break;
+        }
+
+        if (e_act.type == a_act.type
+            && e_act.type == ActionType::SEND)
+        {
+            if (e_act.count != a_act.count)
+            {
+                std::string issue = "Action "
+                                + std::to_string(i)
+                                + " had values not equal! Expected {"
+                                + action_type_to_string(e_act.type)
+                                + " "
+                                + std::to_string(e_act.sessions_start)
+                                + " "
+                                + std::to_string(e_act.sessions_end)
+                                + " "
+                                + std::to_string(e_act.offset.count())
+                                + "} Actual {"
+                                + action_type_to_string(a_act.type)
+                                + " "
+                                + std::to_string(a_act.sessions_start)
+                                + " "
+                                + std::to_string(a_act.sessions_end)
+                                + " "
+                                + std::to_string(a_act.offset.count())
+                                + "}";
+                issues.push_back(issue);
+                //break;
+            }
+        }
+    }
+
+    // Compare payloads.
+    if (expected.payloads.size() != actual.payloads.size())
+    {
+        std::string issue = "Payload list sizes differ! Expected "
+                            + std::to_string(expected.payloads.size())
+                            + " Actual "
+                            + std::to_string(actual.payloads.size());
+        issues.push_back(issue);
+    }
+
+    for (size_t i = 0; i < expected.payloads.size(); i++)
+    {
+        if (i >= actual.payloads.size())
+        {
+            break;
+        }
+
+        const auto & e_payload = expected.payloads[i];
+        const auto & a_payload = actual.payloads[i];
+
+        if (e_payload.packet_data.size()
+            != a_payload.packet_data.size())
+        {
+            std::string issue = "Payload packet sizes differ! Expected "
+                            + std::to_string(e_payload.packet_data.size())
+                            + " Actual "
+                            + std::to_string(a_payload.packet_data.size());
+            issues.push_back(issue);
+        }
+
+        if (e_payload.ops.size()
+            != a_payload.ops.size())
+        {
+            std::string issue = "Payload op list sizes differ! Expected "
+                            + std::to_string(e_payload.ops.size())
+                            + " Actual "
+                            + std::to_string(a_payload.ops.size());
+            issues.push_back(issue);
+        }
+
+        for (size_t j = 0; j < e_payload.ops.size(); j++)
+        {
+            if (j >= e_payload.ops.size())
+            {
+                break;
+            }
+
+            auto e_op = e_payload.ops[j];
+            auto a_op = a_payload.ops[j];
+
+            if (e_op.type != a_op.type
+                || e_op.length != a_op.length
+                || e_op.little_endian != a_op.little_endian
+                || e_op.time_format != a_op.time_format)
+            {
+                std::string issue = "Payload "
+                                    + std::to_string(i)
+                                    + " has operation "
+                                    + std::to_string(j)
+                                    + " with values not equal! Expected {"
+                                    + op_type_to_string(e_op.type)
+                                    + " "
+                                    + std::to_string(e_op.length)
+                                    + " "
+                                    + std::to_string(e_op.little_endian)
+                                    + " "
+                                    + time_format_to_string(e_op.time_format)
+                                    + "} Actual {"
+                                    + op_type_to_string(a_op.type)
+                                    + " "
+                                    + std::to_string(a_op.length)
+                                    + " "
+                                    + std::to_string(a_op.little_endian)
+                                    + " "
+                                    + time_format_to_string(a_op.time_format)
+                                    + "}";
+                issues.push_back(issue);
+                break;
+            }
+        }
+    }
+
+    // Check counters.
+    if (expected.counter_steps.size() != actual.counter_steps.size())
+    {
+        std::string issue = "Counter step sizes differ! Expected "
+                            + std::to_string(expected.counter_steps.size())
+                            + " Actual "
+                            + std::to_string(actual.counter_steps.size());
+        issues.push_back(issue);
+    }
+
+    for (size_t i = 0; i < expected.counter_steps.size(); i++)
+    {
+        if (i >= actual.counter_steps.size())
+        {
+            break;
+        }
+
+        if (expected.counter_steps[i] != actual.counter_steps[i])
+        {
+            std::string issue = "Counter step "
+                                + std::to_string(i)
+                                + " had value mismatch! Expected "
+                                + std::to_string(expected.counter_steps[i])
+                                + " Actual "
+                                + std::to_string(actual.counter_steps[i]);
+            issues.push_back(issue);
+            break;
+        }
+    }
+
+    // Return our issues.
+    return issues;
 }

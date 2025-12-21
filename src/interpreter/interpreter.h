@@ -13,11 +13,12 @@ class Interpreter
 public:
     ParseResult parse_script(std::string script_name);
 
+private:
+
     void set_script_defaults();
 
     ParseResult verify_script();
 
-private:
     ParseResult insert_mod_range(std::map<uint32_t, uint32_t> & map,
                                  Range to_insert,
                                  size_t action_id);

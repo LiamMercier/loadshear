@@ -164,6 +164,13 @@ void TCPSession::do_read_header()
 // do_read_body runs inside a strand
 void TCPSession::do_read_body()
 {
+    // Special case when we have to give a response but no body is expected.
+    if (next_payload_size_ == 0)
+    {
+        handle_message();
+        return;
+    }
+
     if (next_payload_size_ > MESSAGE_BUFFER_SIZE)
     {
         large_body_buffer_.resize(next_payload_size_);

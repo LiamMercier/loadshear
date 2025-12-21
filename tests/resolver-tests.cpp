@@ -13,7 +13,7 @@ namespace Resolver
 TEST(ResolverTests, EnvVariablesTest)
 {
     ResolverOptions options;
-    options.expand_env = true;
+    options.expand_envs = true;
     Resolver::set_global_resolve_options(options);
 
     {

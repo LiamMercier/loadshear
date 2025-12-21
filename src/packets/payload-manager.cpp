@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 
+// TODO <feature>: make it so we can have multiple counter steps per payload.
 PayloadManager::PayloadManager(std::vector<PayloadDescriptor> payloads,
                                std::vector<uint16_t> steps)
 :payloads_(payloads),

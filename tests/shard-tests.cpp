@@ -149,6 +149,14 @@ TEST(TCPShardTests, SingleShardTest)
         std::chrono::milliseconds(0)
     });
 
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
     for (size_t action_index = 0; action_index < actions.size(); action_index++)
     {
@@ -157,6 +165,9 @@ TEST(TCPShardTests, SingleShardTest)
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
+    // Mimic orchestrator stop at end of command loop.
+    s1.stop();
 
     if (server_thread.joinable())
     {
@@ -330,6 +341,14 @@ TEST(TCPShardTests, MultiShardTest)
         std::chrono::milliseconds(0)
     });
 
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
     // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
     for (size_t action_index = 0; action_index < actions.size(); action_index++)
     {
@@ -341,6 +360,12 @@ TEST(TCPShardTests, MultiShardTest)
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    // Mimic orchestrator stop at end of command loop.
+    for (auto & shard : shards)
+    {
+        shard->stop();
     }
 
     if (server_thread.joinable())
@@ -560,6 +585,12 @@ TEST(TCPShardTests, MultiShardHeavy)
         {
              shard->submit_work(action);
         }
+    }
+
+    // Mimic orchestrator stop at end of command loop.
+    for (auto & shard : shards)
+    {
+        shard->stop();
     }
 
     if (server_thread.joinable())

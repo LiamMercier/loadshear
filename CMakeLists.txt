@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(Stressor CXX)
+project(Loadshear CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -33,15 +33,22 @@ enable_testing()
 
 find_package(Boost REQUIRED COMPONENTS
     system
+    program_options
 )
 
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found!")
 endif()
 
+add_subdirectory(src/logger)
 add_subdirectory(src/packets)
 add_subdirectory(src/transports)
 add_subdirectory(src/orchestrator)
 add_subdirectory(src/interpreter)
 add_subdirectory(src/resolver)
-add_subdirectory(tests)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_subdirectory(tests)
+endif()
+
+add_subdirectory(src/cli)

@@ -243,10 +243,27 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
                 // For the session field, we just copy the text (TCP, UDP, etc).
                 settings.session_protocol = value_token.text;
             }
+            else if (keyword.text == "PORT")
+            {
+                uint32_t temp;
+                ParseResult int_res = try_convert_int(value_token,
+                                                      temp,
+                                                      "PORT");
+                if (!int_res.success)
+                {
+                    return int_res;
+                }
+
+                if (temp > 65535)
+                {
+                    return oob_port_error(value_token);
+                }
+
+                // Grab the port value.
+                settings.port = static_cast<uint16_t>(temp);
+            }
             else if (keyword.text == "HEADERSIZE")
             {
-                // Try to convert to integer, fail otherwise.
-
                 ParseResult int_res = try_convert_int(value_token,
                                                       settings.header_size,
                                                       "HEADERSIZE");
@@ -257,7 +274,6 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
             }
             else if (keyword.text == "BODYMAX")
             {
-                // Try to convert to integer, fail otherwise.
                 ParseResult int_res = try_convert_int(value_token,
                                                       settings.body_max,
                                                       "BODYMAX");
@@ -298,7 +314,6 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
             }
             else if (keyword.text == "SHARDS")
             {
-                // Try to convert to integer, fail otherwise.
                 ParseResult int_res = try_convert_int(value_token,
                                                       settings.shards,
                                                       "SHARDS");
@@ -519,38 +534,6 @@ ParseResult Parser::parse_orchestrator(OrchestratorBlock & orchestrator)
             {
                 return range_res;
             }
-
-            // Grab timeout if it exists.
-            if (peek().text == "TIMEOUT")
-            {
-                consume();
-
-                // See if the next token is a Value token.
-                if (!is_expected(TokenType::Value))
-                {
-                    Token temp = peek();
-                    return bad_type_error(temp, TokenType::Value);
-                }
-
-                // Save the timeout value.
-                Token timeout_token = consume();
-
-                ParseResult time_res = try_parse_time(timeout_token, action.count);
-
-                // Check the result was good.
-                if (!time_res.success)
-                {
-                    return time_res;
-                }
-
-                // All fields for drain are done besides OFFSET done at the end of this block.
-            }
-            // Otherwise, set to default if nothing was specified.
-            else
-            {
-                action.count = DEFAULT_TIMEOUT_MS;
-            }
-
         }
         else if (t_action.text == "DISCONNECT")
         {
@@ -902,6 +885,31 @@ ParseResult Parser::negative_integer_error(Token t)
                                 + "]",
                                 PrintStyle::Context)
                             + " (expected a positive integer)";
+
+    return arbitrary_error(error_msg);
+}
+
+ParseResult Parser::oob_port_error(Token t)
+{
+    std::string error_msg = "Token "
+                            + styled_string(t.text,
+                                            PrintStyle::BadValue)
+                            + " at "
+                            + styled_string(
+                                "[line "
+                                + std::to_string(t.line)
+                                + " column "
+                                + std::to_string(t.col)
+                                + "]",
+                                PrintStyle::Context)
+                            + " has "
+                            + styled_string("PORT", PrintStyle::BadField)
+                            + " value out of range "
+                            + "(must be between "
+                            + styled_string("1", PrintStyle::Limits)
+                            + " and "
+                            + styled_string("65535", PrintStyle::Limits)
+                            + ")";
 
     return arbitrary_error(error_msg);
 }

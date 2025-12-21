@@ -6,6 +6,8 @@ add_executable(unit-tests
     orchestrator-tests.cpp
     interpreter-tests.cpp
     resolver-tests.cpp
+    cli-tests.cpp
+    test-fixtures.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
@@ -18,7 +20,11 @@ target_link_libraries(unit-tests PRIVATE
     orchestrator
     interpreter
     resolver
+    cli
 )
+
+# wasmtime has an unused variable that we have errors on in release.
+target_compile_options(unit-tests PRIVATE -Wno-all)
 
 include(GoogleTest)
 

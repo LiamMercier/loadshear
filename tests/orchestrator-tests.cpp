@@ -142,6 +142,14 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
         std::chrono::milliseconds(200)
     });
 
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(500)
+    });
+
     // Create the orchestrator.
 
     Orchestrator<TCPSession> orchestrator(actions,
@@ -309,7 +317,15 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
         0,
         NUM_SESSIONS,
         10*1000,
-        std::chrono::milliseconds(700)
+        std::chrono::milliseconds(300)
+    });
+
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(1000)
     });
 
     // Create the orchestrator.

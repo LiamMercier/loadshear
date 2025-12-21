@@ -43,7 +43,7 @@ ParseResult Interpreter::parse_script(std::string script_name)
         return arbitrary_error(std::move(e_str));
     }
 
-    size_t filesize = Resolver::get_file_size(script_path);
+    uintmax_t filesize = Resolver::get_file_size(script_path);
 
     if (filesize == 0)
     {
@@ -192,6 +192,27 @@ ParseResult Interpreter::verify_script()
                             + styled_string("TCP", PrintStyle::Expected)
                             + ")";
         return arbitrary_error(std::move(e_msg));
+    }
+
+    // Ensure we have a valid port if needed.
+    // TODO: fill this with more protocols when relevant.
+    if (settings.session_protocol == "TCP")
+    {
+        if (settings.port == 0)
+        {
+            std::string e_msg = styled_string("SETTINGS", PrintStyle::Keyword)
+                            + " block had invalid "
+                            + styled_string("PORT", PrintStyle::BadField)
+                            + " "
+                            + styled_string(std::to_string(settings.port),
+                                            PrintStyle::BadValue)
+                            + " (value must be between "
+                            + styled_string("1", PrintStyle::Limits)
+                            + " and "
+                            + styled_string("65535", PrintStyle::Limits)
+                            + ")";
+            return arbitrary_error(std::move(e_msg));
+        }
     }
 
     // We can have header size be zero, but only if read is false.
@@ -615,7 +636,7 @@ ParseResult Interpreter::verify_script()
                     return arbitrary_error(std::move(e_msg));
                 }
 
-                size_t packet_size = Resolver::get_file_size(packet_path);
+                uintmax_t packet_size = Resolver::get_file_size(packet_path);
 
                 if (packet_size == 0)
                 {
@@ -905,30 +926,6 @@ ParseResult Interpreter::verify_script()
             }
             case ActionType::DRAIN:
             {
-                // We should have a positive timeout.
-                if (action.count == 0)
-                {
-                    std::string e_msg = styled_string("DRAIN",
-                                                      PrintStyle::Keyword)
-                                        + " "
-                                        + styled_string("[action "
-                                            + std::to_string(i)
-                                            + "]",
-                                            PrintStyle::Reference)
-                                        + " has "
-                                        + styled_string("TIMEOUT",
-                                                        PrintStyle::BadField)
-                                        + " set to "
-                                        + styled_string("0",
-                                                        PrintStyle::BadValue)
-                                        + styled_string(
-                                            " and would immediately "
-                                            "evict sessions. Use "
-                                            "DISCONNECT if this is desired.",
-                                            PrintStyle::Context);
-                    return arbitrary_error(std::move(e_msg));
-                }
-
                 // Check the action is in range.
                 if (action.range.second > pool_size)
                 {
