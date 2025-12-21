@@ -14,13 +14,23 @@ TODO: installation guide (should be simple when done).
 
 Lets quickly learn how to use `loadshear` for generating network loads.
 
-Using `loadshear` requires a valid loadshear script. In this tutorial, we will use a simple template script to demonstrate functionality.
+Using `loadshear` requires a valid loadshear script. In this tutorial, we will use a simple template script to demonstrate functionality. Start by creating a new folder.
 
-TODO: link to example template
+`mkdir ex-loadshear && cd ex-loadshear`
 
-TODO: have user create a packet file
+Make a placeholder packet.
 
-TODO: invocation
+`printf "hello world" > packet.bin`
+
+Copy the example template [template.ldsh](sdk/scripts/template.ldsh) into the folder.
+
+Now, view the execution plan using the dry run flag.
+
+`loadshear template.ldsh --dry-run`
+
+Or, try running the script against your computer's loopback address.
+
+`loadshear template.ldsh`
 
 ## Loadshear Scripting Language
 
@@ -89,7 +99,7 @@ The script you provide MUST follow the Host-Guest API contract for proper runtim
 
 ### Script Examples
 
-You can find examples in the sdk directory. A copy of the contract functions in C is provided by [wasm-contract.h](sdk/wasm-contract.h) for convenience.
+You can find examples in the sdk directory. A copy of the contract functions in C is provided by [wasm-contract.h](sdk/wasm/wasm-contract.h) for convenience.
 
 #### C and C++
 

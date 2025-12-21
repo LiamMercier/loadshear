@@ -1,1 +1,59 @@
-// A simple template script you can use for creating new scripts.
+// A simple annotated template script you can use for creating new scripts.
+
+// Each valid script has a SETTINGS block.
+SETTINGS settings {
+
+    // We must decide which protocol we will use.
+    SESSION = "TCP"
+
+    // Same with the port.
+    PORT = 55555
+
+    // We need to set this to be positive if we are going to read packets
+    // so we can extract the packet body size.
+    HEADERSIZE = 8
+
+    // Safeguard to prevent the server sending us too much data. Packets
+    // larger than this size will be rejected.
+    BODYMAX = 10240
+
+    // Optional field, we can enable repeating payloads if we wish.
+    REPEAT = "false"
+
+    // Enable reading packets, this means we must have a defined
+    // message handler in this SETTINGS block.
+    READ = "true"
+
+    // Discard packets we read from the socket.
+    HANDLER = "NOP"
+
+    // We must set at least one endpoint.
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+
+    // We must have at least one packet file to use for SEND commands.
+    PACKETS {
+        p1 : "packet.bin"
+    }
+}
+
+// Each script has an ORCHESTRATOR block that defines what actions to do
+ORCHESTRATOR settings {
+
+    // Create 20 sessions
+    CREATE 20 OFFSET 0ms
+
+    // Connect all sessions
+    CONNECT 0:20 OFFSET 100ms
+
+    // Send one copy of packet p1 from each session
+    SEND 0:20 p1 COPIES 1 OFFSET 50ms
+
+    // Have each session try to finish sending their payloads and then disconnect
+    DRAIN 0:20 OFFSET 500ms
+
+    // Disconnect all sessions after 1 second of draining.
+    DISCONNECT 0:20 OFFSET 1s
+}

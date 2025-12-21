@@ -56,11 +56,15 @@ CLIParseResult parse_cli(int argc, char** argv)
 
         if (var_map.count("help") || cli_ops.script_file.empty())
         {
-            std::cout << "\nUsage: "
-                      << "loadshear"
-                      << " <script_file> [options]\n\n"
-                      << op_desc
-                      << "\n";
+            std::ostringstream oss;
+            oss << op_desc;
+
+            std::string msg = "\nUsage: "
+                              "loadshear"
+                              " <script_file> [options]\n\n"
+                              + oss.str()
+                              + "\n";
+            Logger::info(std::move(msg));
 
             res.status = CLIParseResult::ParseStatus::Help;
             return res;
