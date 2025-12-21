@@ -12,9 +12,21 @@ TODO: installation guide (should be simple when done).
 
 ## Quickstart
 
-TODO: quickstart
+Lets quickly learn how to use `loadshear` for generating network loads.
+
+Using `loadshear` requires a valid loadshear script. In this tutorial, we will use a simple template script to demonstrate functionality.
+
+TODO: link to example template
+
+TODO: have user create a packet file
+
+TODO: invocation
 
 ## Loadshear Scripting Language
+
+Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script to allow you to customize load generation. The `loadshear` application will use any file that follows the DSL, but we suggest naming files with `.ldsh` or `.loadshear` for workspace cleanliness.
+
+
 
 ## Defining the Packet Response Protocol
 
