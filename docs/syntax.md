@@ -68,41 +68,224 @@ ORCHESTRATOR settings_identifier {
 
 ## SESSION
 
-TODO:
+The type of session used for connections. 
+
+### Values
+
+SESSION may be any of the following values
+
+- "TCP"
+
+### Usage
+
+```
+{
+    ...
+    SESSION = "TCP"
+    ...
+}
+```
+
+[back](#fields)
 
 ## PORT
 
-TODO:
+The port used for connections. Only set to a default value if possible for the session type.
+
+### Values
+
+PORT must be a valid integer from 1 through 65535
+
+### Usage
+
+```
+{
+    ...
+    PORT = 12345
+    ...
+}
+```
+
+[back](#fields)
 
 ## HEADERSIZE
 
-TODO: 
+The number of bytes a session must read to construct a header for extracting the body length of the packet.
+
+### Values
+
+Optional if READ is "false"
+
+HEADERSIZE must be a positive integer
+
+### Usage
+
+```
+{
+    ...
+    HEADERSIZE = 16
+    ...
+}
+```
+
+[back](#fields)
 
 ## BODYMAX
 
-TODO:
+The maximum body size for an incoming packet. Sessions will close if they see a header that asks to read more bytes than BODYMAX allows.
+
+### Values
+
+Optional if READ is "false"
+
+BODYMAX must be a positive integer
+
+### Usage
+
+```
+{
+    ...
+    BODYMAX = 12288
+    ...
+}
+```
+
+[back](#fields)
 
 ## READ
 
-TODO:
+Decide if sessions should read data from the socket.
+
+### Values
+
+READ must be "true" or "false"
+
+### Usage
+
+```
+{
+    ...
+    READ = "true"
+    ...
+}
+```
+
+[back](#fields)
 
 ## REPEAT
 
-TODO:
+Decide if sessions should repeat payloads defined by the ORCHESTRATOR block once they have delivered all of their data.
+
+### Values
+
+REPEAT must be "true" or "false"
+
+### Usage
+
+```
+{
+    ...
+    REPEAT = "true"
+    ...
+}
+```
+
+[back](#fields)
 
 ## ENDPOINTS
 
-TODO:
+A list of endpoints that sessions will try to resolve for connecting to the target. 
+
+These should all be for the same logical target, listing multiple logical targets can result in load generation being split between servers based on how sessions decide to connect.
+
+### Values
+
+Values are connectable endpoints, separated by commas.
+
+### Usage
+
+```
+{
+    ...
+    ENDPOINTS {
+        "localhost",
+        127.0.0.1
+    }
+    ...
+}
+```
+
+[back](#fields)
 
 ## SHARDS
 
-TODO:
+The number of single threaded shards to distribute work across.
+
+### Values
+
+SHARDS is optional and must be a positive value, less than or equal to the number of sessions being created.
+
+By default, SHARDS will be set to the detected number of threads that can be concurrently executed. Typically SHARDS will equal the number of logical cores in your device.
+
+### Usage
+
+```
+{
+    ...
+    SHARDS = 8
+    ...
+}
+```
+
+[back](#fields)
 
 ## PACKETS
 
-TODO:
+The list of packets that will be read by the program to create payloads.
+
+### Values
+
+Each packet should be listed as
+
+```
+<Identifier> : <Value>
+```
+
+With comma's between multiple packets.
+
+### Usage
+
+```
+{
+    PACKETS {
+        packet_1 : "path/to/packet.bin",
+        packet_2 : "path/to/packet2.bin"
+    }
+}
+```
+
+[back](#fields)
 
 ## HANDLER
 
-TODO:
+The type of message handler to use in each session for handling packets we read.
+
+### Values
+
+You can simply read and drop packets using "NOP" or you can provide your own packet response handler by compiling a WebAssembly module. Instructions for compiling the module are in the main README.
+
+- "NOP"
+- "path/to/wasm/module.wasm"
+
+### Usage
+
+```
+{
+    ...
+    HANDLER = "modules/mymodule.wasm"
+    ...
+}
+```
+
+[back](#fields)
 
