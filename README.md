@@ -28,7 +28,7 @@ Now, view the execution plan using the dry run flag.
 
 `loadshear template.ldsh --dry-run`
 
-Or, try running the script against your computer's loopback address.
+Or, try running the script against your loopback address.
 
 `loadshear template.ldsh`
 
@@ -40,14 +40,14 @@ Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script fo
 
 Valid scripts are expected to have:
 
-- One `SETTINGS` block, defining any necessary settings or files
+- One `SETTINGS` block, defining any external resources
 - One `ORCHESTRATOR` block, defining executable actions
 
-In the event that there are multiple blocks the program may output an error or use the last block as being canonical. 
+In the event that there are multiple blocks the program may output an error or use the last block as being canonical. Prefer having one pair of blocks per script.
 
 > Note: In the future, we may extend the DSL to allow for multiple block pairs.
 
-TODO:
+For syntax specifics, see [syntax.md](docs/syntax.md).
 
 ### Execution Model
 

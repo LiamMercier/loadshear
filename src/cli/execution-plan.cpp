@@ -24,6 +24,10 @@ template std::expected<ExecutionPlan<TCPSession>, std::string>
 generate_execution_plan<TCPSession>(const DSLData &,
                                     std::pmr::memory_resource* memory);
 
+// TODO <optimization>: If we see FLOOD called, we can stop adding SEND actions
+//                      and just read the packets and adding descriptors, since
+//                      the SEND action just tells session's they may send, and
+//                      FLOOD already does this.
 template<typename Session>
 std::expected<ExecutionPlan<Session>, std::string>
 generate_execution_plan(const DSLData & script,
