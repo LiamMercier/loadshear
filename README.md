@@ -34,9 +34,26 @@ Or, try running the script against your computer's loopback address.
 
 ## Loadshear Scripting Language
 
-Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script to allow you to customize load generation. The `loadshear` application will use any file that follows the DSL, but we suggest naming files with `.ldsh` or `.loadshear` for workspace cleanliness.
+Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script for customizing load generation. The `loadshear` application will use any file that follows the DSL, but we suggest naming files with `.ldsh` or `.loadshear` for workspace cleanliness. Examples can be found in the [sdk](sdk) folder.
 
+### Syntax
 
+Valid scripts are expected to have:
+
+- One `SETTINGS` block, defining any necessary settings or files
+- One `ORCHESTRATOR` block, defining executable actions
+
+In the event that there are multiple blocks the program may output an error or use the last block as being canonical. 
+
+> Note: In the future, we may extend the DSL to allow for multiple block pairs.
+
+TODO:
+
+### Execution Model
+
+High level blocks are parsed to create an execution plan which can be previewed with the flag `--dry-run` from the CLI. 
+
+During plan generation, we read each packet defined in `PACKETS` into memory, and generate a small payload descriptor for each `SEND` copy that was defined.
 
 ## Defining the Packet Response Protocol
 
