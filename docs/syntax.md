@@ -80,14 +80,14 @@ The ORCHESTRATOR block defines the order of actions to include in the execution 
 
 ### Fields
 
-| Field                    | Optional  |
-|--------------------------|-----------|
-| [CREATE](#CREATE)        | Required  |
-| [CONNECT](CONNECT)       | Required  |
-| [SEND](SEND)             | Optional  |
-| [FLOOD](FLOOD)           | Optional  |
-| [DRAIN](DRAIN)           | Optional  |
-| [DISCONNECT](DISCONNECT) | Optional  |
+| Field                     | Optional |
+|---------------------------|----------|
+| [CREATE](#CREATE)         | Required |
+| [CONNECT](#CONNECT)       | Required |
+| [SEND](#SEND)             | Optional |
+| [FLOOD](#FLOOD)           | Optional |
+| [DRAIN](#DRAIN)           | Optional |
+| [DISCONNECT](#DISCONNECT) | Optional |
 
 ### Usage
 
@@ -347,6 +347,8 @@ ORCHESTRATOR settings_id {
 
 Creates 100 sessions, index 0 through 49 on shard 1, 50 through 99 on shard 2.
 
+[back](#fields-1)
+
 ## CONNECT
 
 Connect the session range to the endpoints.
@@ -366,6 +368,8 @@ ORCHESTRATOR settings_id {
 ```
 
 Connects sessions indexed 0 through 99 to the endpoint.
+
+[back](#fields-1)
 
 ## SEND
 
@@ -389,6 +393,8 @@ ORCHESTRATOR settings_id {
     - With 8 bytes replaced starting at index 0 by a little endian counter using a session global increment of 7
     - With 8 bytes replaced starting at index 12 by a big endian timestamp of milliseconds
 
+[back](#fields-1)
+    
 ## FLOOD
 
 Set session range to flood with any scheduled payloads. SEND actions after FLOOD simply add to the payloads we prepare at program start, but do not control when we send the payload (FLOOD overrides their actions and says to send as soon as possible).
@@ -409,6 +415,8 @@ ORCHESTRATOR settings_id {
     FLOOD 0:100 OFFSET 500ms
 }
 ```
+
+[back](#fields-1)
 
 ## DRAIN
 
@@ -431,6 +439,8 @@ ORCHESTRATOR settings_id {
 }
 ```
 
+[back](#fields-1)
+
 ## DISCONNECT
 
 Forcibly disconnect each session in the range. This should be called as the end of an ORCHESTRATOR block if you wish for DRAIN to give each session some time, since the orchestrator will try to exit after the last action.
@@ -452,6 +462,8 @@ ORCHESTRATOR settings_id {
 }
 ```
 
+[back](#fields-1)
+
 ## OFFSET
 
 Schedule the action relative to the previous action.
@@ -469,6 +481,8 @@ CREATE 100 OFFSET 20s
 ```
 DRAIN 0:100 OFFSET 500ms
 ```
+
+[back](#fields-1)
 
 ## COUNTER
 
@@ -496,6 +510,8 @@ COUNTER <start:int>:<length:int> <time format:string>:<increment:int>
 
 Modify p1 to have a counter of length 8 starting at index 0 with 55 global increment in little endian format.
 
+[back](#fields-1)
+
 ## TIMESTAMP
 
 Replace bytes of the packet with a timestamp.
@@ -521,3 +537,5 @@ TIMESTAMP <start:int>:<length:int> <time format:string>:<increment:int>
 ```
 
 Modify p1 to have a timestamp in seconds of length 8 starting at index 0 in little endian format.
+
+[back](#fields-1)
