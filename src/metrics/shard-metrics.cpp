@@ -1,0 +1,25 @@
+#include "shard-metrics.h"
+
+void ShardMetrics::record_latency(uint64_t latency_us)
+{
+    // Clamp to 64us, anything less is basically impossible to measure in our case.
+    if (latency_us < 64)
+    {
+        latency_buckets[0].fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+
+    // Quickly compute branchless log2 using bit width.
+    unsigned int bucket = std::bit_width(latency_us);
+
+    // 64us = 2^6 so remove the offset.
+    int index = bucket - 6;
+
+    // Handle overflow (very long time).
+    if (index >= 15)
+    {
+        index = 15;
+    }
+
+    latency_buckets[index].fetch_add(1, std::memory_order_relaxed);
+}

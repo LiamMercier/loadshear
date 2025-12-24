@@ -492,6 +492,8 @@ Create a global counter with an increment for sessions to use when sending this 
 
 Each copy of the payload will increment the counter by the increment size, and each session will increment the same counter.
 
+Using COUNTER can reduce throughput, when two shards need to update the same counter there will be cache line contention because both threads are writing to the same memory.
+
 ### Values
 
 The start and length values must be positive integers. Start must be a valid index into the packet bytes, length must be at most 8.

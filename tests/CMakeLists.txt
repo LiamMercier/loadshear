@@ -8,6 +8,7 @@ add_executable(unit-tests
     resolver-tests.cpp
     cli-tests.cpp
     test-fixtures.cpp
+    metric-tests.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
@@ -21,6 +22,7 @@ target_link_libraries(unit-tests PRIVATE
     interpreter
     resolver
     cli
+    metrics
 )
 
 # wasmtime has an unused variable that we have errors on in release.
