@@ -488,7 +488,9 @@ DRAIN 0:100 OFFSET 500ms
 
 ## COUNTER
 
-Create a global counter with an increment for sessions to use when sending a payload.
+Create a global counter with an increment for sessions to use when sending this payload. There may only be one instance of COUNTER per SEND declaration.
+
+Each copy of the payload will increment the counter by the increment size, and each session will increment the same counter.
 
 ### Values
 
@@ -506,11 +508,11 @@ COUNTER <start:int>:<length:int> <time format:string>:<increment:int>
 
 ```
 ...
-    SEND 0:100 p1 COPIES 1 COUNTER 0:8 "little":55
+    SEND 0:100 username COPIES 1 COUNTER 0:8 "little":1
 ...
 ```
 
-Modify p1 to have a counter of length 8 starting at index 0 with 55 global increment in little endian format.
+Modify username to have a counter of length 8 starting at index 0 with global increment of 1 in little endian format.
 
 [back](#fields-1)
 
