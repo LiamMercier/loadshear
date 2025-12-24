@@ -78,6 +78,8 @@ SETTINGS setting_identifier {
 
 The ORCHESTRATOR block defines the order of actions to include in the execution plan.
 
+We parse the actions linearly to construct a list of actions taken by the orchestrator at runtime. Certain actions are required for others to be valid (i.e CREATE before CONNECT). On the final action, the orchestrator will do the action and set all resources as being able to shutdown and issue closing commands.
+
 ### Fields
 
 | Field                     | Optional |
@@ -303,7 +305,7 @@ The type of message handler to use in each session for handling packets we read.
 
 ### Values
 
-You can simply read and drop packets using "NOP" or you can provide your own packet response handler by compiling a WebAssembly module. Instructions for compiling the module are in the main README.
+You can simply read and drop packets using "NOP" or you can provide your own packet response handler by compiling a WebAssembly module. Instructions for compiling a compatible module are available in [wasm-modules](wasm-modules.md).
 
 - "NOP"
 - "path/to/wasm/module.wasm"
