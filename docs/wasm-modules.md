@@ -53,5 +53,3 @@ Optionally, strip debug information with the WebAssembly Binary Toolkit (WABT).
 ```
 wasm-strip <YOUR_CODE>.wasm
 ```
-
-TODO: show a respond heartbeat example
