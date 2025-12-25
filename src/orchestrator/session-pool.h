@@ -10,6 +10,7 @@
 #include <boost/asio.hpp>
 
 #include "session-config.h"
+#include "shard-metrics.h"
 
 #ifdef DEV_BUILD
 #include "logger.h"
@@ -50,8 +51,10 @@ public:
 public:
     SessionPool(asio::io_context & cntx,
                 const SessionConfig & config,
+                const ShardMetrics & shard_metrics,
                 NotifyClosed notify_closed)
     :cntx_(cntx),
+    metrics_(shard_metrics),
     config_(config),
     notify_closed_(notify_closed)
     {
@@ -211,6 +214,7 @@ private:
     // Store a reference to the io context to give to new sessions.
     asio::io_context & cntx_;
 
+    const ShardMetrics & metrics_;
     SessionConfig config_;
     Session::DisconnectCallback on_done_callback_;
 

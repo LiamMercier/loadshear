@@ -13,6 +13,7 @@
 #include "action-descriptor.h"
 #include "host-info.h"
 #include "logger.h"
+#include "shard-metrics.h"
 
 namespace asio = boost::asio;
 
@@ -38,7 +39,10 @@ public:
     handler_factory_(std::move(handler_factory)),
     payload_manager_(std::move(manager_ptr)),
     config_(config),
-    session_pool_(cntx_, config_, [this](){ this->on_pool_closed(); }),
+    session_pool_(cntx_,
+                  config_,
+                  metrics_,
+                  [this](){ this->on_pool_closed(); }),
     host_info_(std::move(host_info_copy)),
     on_shard_closed_(std::move(on_shard_closed))
     {
@@ -161,7 +165,8 @@ private:
                                               cntx_,
                                               config_,
                                               *message_handler_,
-                                              *payload_manager_);
+                                              *payload_manager_,
+                                              metrics_);
                 break;
             }
             case ActionType::CONNECT:
@@ -254,12 +259,18 @@ private:
     std::unique_ptr<MessageHandler> message_handler_;
     std::shared_ptr<const PayloadManager> payload_manager_;
 
+    // We need to setup our metrics logging object.
+    ShardMetrics metrics_;
+
+    // SessionPool + configuration, holds every network related object.
     SessionConfig config_;
     SessionPool<Session> session_pool_;
 
-    // Orchestrator specific host information.
+    // Orchestrator specific host information. This can be simply endpoints,
+    // or possibly TLS status, etc.
     HostInfo<Session> host_info_;
 
-    // Orchestrator callback.
+    // Orchestrator callback. We let the orchestrator know the shard is finished so it
+    // can wake up and close itself if every other shard has closed.
     NotifyShardClosed on_shard_closed_;
 };

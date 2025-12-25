@@ -9,6 +9,7 @@
 #include "message-handler-interface.h"
 #include "payload-manager.h"
 #include "response-packet.h"
+#include "shard-metrics.h"
 
 namespace asio = boost::asio;
 
@@ -54,6 +55,7 @@ public:
                const SessionConfig & config,
                const MessageHandler & message_handler,
                const PayloadManager & payload_manager,
+               const ShardMetrics & shard_metrics,
                DisconnectCallback & on_disconnect);
 
     // This class should not be moved or copied.

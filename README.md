@@ -167,3 +167,4 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 ## Backlog
 
 - Refactor each CMake subtarget to have modern include semantics
+- Show endpoints/misc in dry run

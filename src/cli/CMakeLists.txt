@@ -15,6 +15,7 @@ target_link_libraries(cli PUBLIC
     transports
     packets
     logger
+    metrics
     Boost::program_options
     wasmtime
 )

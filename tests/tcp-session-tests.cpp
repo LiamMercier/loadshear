@@ -95,6 +95,8 @@ TEST(TCPSessionTests, SingleSessionParsing)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -128,6 +130,7 @@ TEST(TCPSessionTests, SingleSessionParsing)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         // Connection endpoint.
@@ -293,6 +296,8 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -309,6 +314,7 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         // Connection endpoint.
@@ -441,6 +447,8 @@ TEST(TCPSessionTests, SingleSessionWriteOne)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -475,6 +483,7 @@ TEST(TCPSessionTests, SingleSessionWriteOne)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         // Connection endpoint.
@@ -619,6 +628,8 @@ TEST(TCPSessionTests, SingleSessionCounterFlood)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -653,6 +664,7 @@ TEST(TCPSessionTests, SingleSessionCounterFlood)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         // Connection endpoint.
@@ -803,6 +815,8 @@ TEST(TCPSessionTests, SingleSessionTimestampFlood)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -837,6 +851,7 @@ TEST(TCPSessionTests, SingleSessionTimestampFlood)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         // Connection endpoint.
@@ -982,6 +997,8 @@ TEST(TCPSessionTests, MultiSessionCounterFlood)
         session_cntx.stop();
     };
 
+    ShardMetrics metrics;
+
     asio::post(session_cntx, [&](){
         try {
             handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
@@ -1016,12 +1033,14 @@ TEST(TCPSessionTests, MultiSessionCounterFlood)
                                               config,
                                               *handler_ptr,
                                               payload_manager,
+                                              metrics,
                                               cb);
 
         session_ptr_2 = make_shared<TCPSession>(session_cntx,
                                                 config,
                                                 *handler_ptr,
                                                 payload_manager,
+                                                metrics,
                                                 cb);
 
         // Connection endpoint.

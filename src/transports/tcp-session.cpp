@@ -7,6 +7,7 @@ TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,
                        const PayloadManager & payload_manager,
+                       const ShardMetrics & shard_metrics,
                        DisconnectCallback & on_disconnect)
 :config_(config),
 strand_(cntx.get_executor()),

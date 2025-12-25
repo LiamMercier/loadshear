@@ -1,11 +1,11 @@
 #include "shard-metrics.h"
 
-void ShardMetrics::record_latency(uint64_t latency_us)
+void ShardMetrics::record_connection_latency(uint64_t latency_us)
 {
     // Clamp to 64us, anything less is basically impossible to measure in our case.
     if (latency_us < 64)
     {
-        latency_buckets[0].fetch_add(1, std::memory_order_relaxed);
+        connection_latency_buckets[0] += 1;
         return;
     }
 
@@ -21,5 +21,5 @@ void ShardMetrics::record_latency(uint64_t latency_us)
         index = 15;
     }
 
-    latency_buckets[index].fetch_add(1, std::memory_order_relaxed);
+    connection_latency_buckets[index] += 1;
 }
