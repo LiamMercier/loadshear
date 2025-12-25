@@ -121,15 +121,17 @@ TEST(ShardMetrics, RecordLatencies)
     std::array<std::atomic<uint64_t>, 16> bucket_values = {2, 6, 10, 6, 5, 4, 4, 4,
                                                            4, 7, 3, 3, 4, 5, 3, 8};
 
+    auto snapshot = metrics.fetch_snapshot();
+
     // Ensure the counts are equal.
-    for (size_t i = 0; i < metrics.connection_latency_buckets.size(); i++)
+    for (size_t i = 0; i < snapshot.connection_latency_buckets.size(); i++)
     {
-        EXPECT_EQ(metrics.connection_latency_buckets[i],
+        EXPECT_EQ(snapshot.connection_latency_buckets[i],
                   bucket_values[i]) << "Bucket values for bucket "
                                     << i
                                     << " not equal! Expected: "
                                     << bucket_values[i]
                                     << " Actual: "
-                                    << metrics.connection_latency_buckets[i];
+                                    << snapshot.connection_latency_buckets[i];
     }
 }

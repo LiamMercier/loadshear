@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <array>
 
+#include "metrics-snapshot.h"
+
 // Handle alignment for thread interference.
 //
 // We absolutely do not want any way for ShardMetrics for shard A and B to
@@ -19,7 +21,13 @@ struct alignas(ALIGNMENT) ShardMetrics
 public:
     void record_connection_latency(uint64_t latency_us);
 
-public:
+    inline void record_bytes_sent(uint64_t count);
+
+    inline void record_bytes_read(uint64_t count);
+
+    MetricsSnapshot fetch_snapshot();
+
+private:
     uint64_t bytes_sent{0};
     uint64_t bytes_read{0};
 
@@ -37,3 +45,12 @@ public:
     std::array<uint64_t, 16> connection_latency_buckets{};
 };
 
+inline void ShardMetrics::record_bytes_sent(uint64_t count)
+{
+    bytes_sent += count;
+}
+
+inline void ShardMetrics::record_bytes_read(uint64_t count)
+{
+    bytes_read += count;
+}

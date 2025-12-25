@@ -23,3 +23,13 @@ void ShardMetrics::record_connection_latency(uint64_t latency_us)
 
     connection_latency_buckets[index] += 1;
 }
+
+MetricsSnapshot ShardMetrics::fetch_snapshot()
+{
+    MetricsSnapshot res;
+    res.bytes_sent = bytes_sent;
+    res.bytes_read = bytes_read;
+    res.connection_latency_buckets = connection_latency_buckets;
+
+    return res;
+}
