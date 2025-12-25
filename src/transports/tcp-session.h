@@ -55,7 +55,7 @@ public:
                const SessionConfig & config,
                const MessageHandler & message_handler,
                const PayloadManager & payload_manager,
-               const ShardMetrics & shard_metrics,
+               ShardMetrics & shard_metrics,
                DisconnectCallback & on_disconnect);
 
     // This class should not be moved or copied.
@@ -143,7 +143,7 @@ private:
     size_t writes_queued_{0};
 
     //
-    // Handlers
+    // Handlers & metrics
     //
 
     // Reference to the thread's message handler interface.
@@ -151,6 +151,9 @@ private:
 
     // Reference to the Controller's payload manager.
     const PayloadManager & payload_manager_;
+
+    // Write metrics, keep track of connection times.
+    ShardMetrics & metrics_sink_;
 
     //
     const DisconnectCallback on_disconnect_;

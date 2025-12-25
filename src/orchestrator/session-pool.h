@@ -51,7 +51,7 @@ public:
 public:
     SessionPool(asio::io_context & cntx,
                 const SessionConfig & config,
-                const ShardMetrics & shard_metrics,
+                ShardMetrics & shard_metrics,
                 NotifyClosed notify_closed)
     :cntx_(cntx),
     metrics_(shard_metrics),
@@ -197,7 +197,6 @@ public:
     }
 
 private:
-    // TODO: perhaps send back analytics here? But, if we want live analytics, need something else.
     void disconnect_callback()
     {
         active_sessions_ -= 1;
@@ -214,7 +213,7 @@ private:
     // Store a reference to the io context to give to new sessions.
     asio::io_context & cntx_;
 
-    const ShardMetrics & metrics_;
+    ShardMetrics & metrics_;
     SessionConfig config_;
     Session::DisconnectCallback on_done_callback_;
 

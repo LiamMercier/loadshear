@@ -7,7 +7,7 @@ TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,
                        const PayloadManager & payload_manager,
-                       const ShardMetrics & shard_metrics,
+                       ShardMetrics & shard_metrics,
                        DisconnectCallback & on_disconnect)
 :config_(config),
 strand_(cntx.get_executor()),
@@ -15,6 +15,7 @@ socket_(cntx),
 incoming_header_(config_.header_size),
 message_handler_(message_handler),
 payload_manager_(payload_manager),
+metrics_sink_(shard_metrics),
 on_disconnect_(on_disconnect)
 {
     current_payload_.temps.reserve(MESSAGE_BUFFER_SIZE);
@@ -27,9 +28,12 @@ void TCPSession::start(const Endpoints & endpoints)
         self->live_ = true;
         self->connecting_ = true;
 
+        using clock = std::chrono::steady_clock;
+        auto conn_start = clock::now();
+
         asio::async_connect(self->socket_, endpoints,
             asio::bind_executor(self->strand_,
-                [self](boost::system::error_code ec,
+                [self, conn_start](boost::system::error_code ec,
                     tcp::endpoint ep){
                 self->connecting_ = false;
 
@@ -39,6 +43,16 @@ void TCPSession::start(const Endpoints & endpoints)
                     self->close_session();
                     return;
                 }
+
+                // Record connection time.
+                auto end = clock::now();
+
+                uint64_t latency_us = static_cast<uint64_t>(
+                        std::chrono::duration_cast
+                            <std::chrono::microseconds>(end - conn_start).count()
+                    );
+
+                self->metrics_sink_.record_connection_latency(latency_us);
 
                 self->on_connect();
             }));
