@@ -1,6 +1,11 @@
 #include <gtest/gtest.h>
 
+#include "test-helpers.h"
+
 #include "shard-metrics.h"
+#include "tcp-broadcast-server.h"
+#include "wasm-message-handler.h"
+#include "tcp-session.h"
 
 TEST(ShardMetrics, RecordLatencies)
 {
@@ -134,4 +139,175 @@ TEST(ShardMetrics, RecordLatencies)
                                     << " Actual: "
                                     << snapshot.connection_latency_buckets[i];
     }
+}
+
+TEST(ShardMetrics, RecordBytesTransmitted)
+{
+    // Create a simple server that sends packets.
+    asio::io_context server_cntx;
+    asio::ip::tcp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
+
+    uint64_t server_interval_ms = 5;
+    uint64_t total_packets = 100;
+
+    std::vector<uint8_t> packet{ 0x1, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0 };
+
+    TCPBroadcastServer server(server_cntx,
+                              server_ep,
+                              server_interval_ms,
+                              packet,
+                              total_packets);
+
+    std::thread server_thread([&]
+    {
+        server.start();
+        server_cntx.run();
+    });
+
+    asio::io_context session_cntx;
+
+    SessionConfig config(4, 12288, true, false);
+
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
+
+    std::vector<uint8_t> wasm_bytes;
+
+    // re-use this module.
+    try {
+        wasm_bytes = read_binary_file("tests/modules/tcp-single-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
+
+    if (!module_tmp)
+    {
+        session_cntx.stop();
+
+        server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        FAIL();
+    }
+
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
+
+    try {
+        WASMMessageHandler test_handler_construct(engine, module);
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    // Add some payloads.
+    std::vector<PayloadDescriptor> payloads;
+    std::vector<uint16_t> steps(payloads.size(), 1);
+    PayloadManager payload_manager(payloads, steps);
+
+    std::shared_ptr<WASMMessageHandler> handler_ptr;
+    std::shared_ptr<TCPSession> session_ptr;
+
+    TCPSession::DisconnectCallback cb = [&](){
+        session_cntx.stop();
+    };
+
+    ShardMetrics metrics;
+
+    asio::post(session_cntx, [&](){
+        try {
+            handler_ptr = std::make_shared<WASMMessageHandler>(engine, module);
+        }
+        catch (const std::exception & error)
+        {
+            std::cerr << error.what() << "\n";
+            session_cntx.stop();
+            return;
+        }
+
+        std::array<bool, 4> bytes_to_read{0,0,0,1};
+        handler_ptr->set_header_parser([bytes_to_read](std::span<const uint8_t> buffer) -> HeaderResult
+        {
+            size_t size = 0;
+
+            for (size_t i = 0; i < bytes_to_read.size(); i++)
+            {
+                if (bytes_to_read[i])
+                {
+                    size <<= 8;
+                    size |= buffer[i];
+                }
+            }
+
+            return {size, HeaderResult::Status::OK};
+        });
+
+        session_ptr = make_shared<TCPSession>(session_cntx,
+                                              config,
+                                              *handler_ptr,
+                                              payload_manager,
+                                              metrics,
+                                              cb);
+
+        const TCPSession::Endpoints endpoints{
+                TCPSession::tcp::endpoint(
+                    asio::ip::make_address("127.0.0.1"),
+                    12345
+                )};
+
+        session_ptr->start(endpoints);
+
+    });
+
+    asio::steady_timer stop_timer(session_cntx, std::chrono::milliseconds(100));
+    stop_timer.async_wait([&](const boost::system::error_code &)
+    {
+        session_ptr->stop();
+    });
+
+    session_cntx.run();
+
+    server_cntx.stop();
+
+    if (server_thread.joinable())
+    {
+        server_thread.join();
+    }
+
+    auto snapshot = metrics.fetch_snapshot();
+
+    // Check the shard metrics to see that we wrote and read payloads.
+    EXPECT_EQ(server.lifetime_sent_,
+              snapshot.bytes_read) << "Snapshot reads not equal to server writes! "
+                                   << "Expected: "
+                                   << server.lifetime_sent_
+                                   << " Actual: "
+                                   << snapshot.bytes_read;
+
+    EXPECT_EQ(server.lifetime_received_,
+              snapshot.bytes_sent) << "Snapshot writes not equal to server reads! "
+                                   << "Expected: "
+                                   << server.lifetime_received_
+                                   << " Actual: "
+                                   << snapshot.bytes_sent;
+
+    EXPECT_EQ(server.lifetime_connections_,
+              snapshot.finished_connections) << "Snapshot finished connections "
+                                             << "not equal to server connection count! "
+                                             << "Expected: "
+                                             << server.lifetime_connections_
+                                             << " Actual: "
+                                             << snapshot.finished_connections;
+
+    SUCCEED();
 }

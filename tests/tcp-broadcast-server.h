@@ -5,6 +5,8 @@
 
 #include <unordered_set>
 
+namespace asio = boost::asio;
+
 class TCPBroadcastServer
 {
 public:
