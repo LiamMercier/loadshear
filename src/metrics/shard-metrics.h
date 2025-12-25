@@ -25,11 +25,21 @@ public:
 
     inline void record_bytes_read(uint64_t count);
 
+    inline void record_connection_attempt();
+
+    inline void record_connection_fail();
+
+    inline void record_connection_success();
+
     MetricsSnapshot fetch_snapshot();
 
 private:
     uint64_t bytes_sent{0};
     uint64_t bytes_read{0};
+
+    uint64_t connection_attempts{0};
+    uint64_t failed_connections{0};
+    uint64_t finished_connections{0};
 
     // We map time values to buckets based on log multiples of 64us.
     //
@@ -53,4 +63,19 @@ inline void ShardMetrics::record_bytes_sent(uint64_t count)
 inline void ShardMetrics::record_bytes_read(uint64_t count)
 {
     bytes_read += count;
+}
+
+inline void ShardMetrics::record_connection_attempt()
+{
+    connection_attempts += 1;
+}
+
+inline void ShardMetrics::record_connection_fail()
+{
+    failed_connections += 1;
+}
+
+inline void ShardMetrics::record_connection_success()
+{
+    finished_connections += 1;
 }

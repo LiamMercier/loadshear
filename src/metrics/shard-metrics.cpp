@@ -27,8 +27,14 @@ void ShardMetrics::record_connection_latency(uint64_t latency_us)
 MetricsSnapshot ShardMetrics::fetch_snapshot()
 {
     MetricsSnapshot res;
+
     res.bytes_sent = bytes_sent;
     res.bytes_read = bytes_read;
+
+    res.connection_attempts = connection_attempts;
+    res.failed_connections = failed_connections;
+    res.finished_connections = finished_connections;
+
     res.connection_latency_buckets = connection_latency_buckets;
 
     return res;

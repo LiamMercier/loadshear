@@ -28,6 +28,8 @@ void TCPSession::start(const Endpoints & endpoints)
         self->live_ = true;
         self->connecting_ = true;
 
+        self->metrics_sink_.record_connection_attempt();
+
         using clock = std::chrono::steady_clock;
         auto conn_start = clock::now();
 
@@ -40,6 +42,7 @@ void TCPSession::start(const Endpoints & endpoints)
                 // If we failed to connect, stop.
                 if (ec)
                 {
+                    self->metrics_sink_.record_connection_fail();
                     self->close_session();
                     return;
                 }
@@ -53,6 +56,7 @@ void TCPSession::start(const Endpoints & endpoints)
                     );
 
                 self->metrics_sink_.record_connection_latency(latency_us);
+                self->metrics_sink_.record_connection_success();
 
                 self->on_connect();
             }));
@@ -144,12 +148,14 @@ void TCPSession::do_read_header()
     asio::async_read(socket_,
         asio::buffer(incoming_header_, config_.header_size),
         asio::bind_executor(strand_,
-            [self = shared_from_this()](boost::system::error_code ec, std::size_t){
+            [self = shared_from_this()](boost::system::error_code ec, size_t count){
                 if (ec)
                 {
                     self->handle_stream_error(ec);
                     return;
                 }
+
+                self->metrics_sink_.record_bytes_read(count);
 
                 // User defined message parsing to get message size
                 std::span<const uint8_t> header_bytes(self->incoming_header_);
@@ -199,12 +205,14 @@ void TCPSession::do_read_body()
     asio::async_read(socket_,
         asio::buffer(body_buffer_ptr_, next_payload_size_),
         asio::bind_executor(strand_,
-            [self = shared_from_this()](boost::system::error_code ec, size_t){
+            [self = shared_from_this()](boost::system::error_code ec, size_t count){
                 if (ec)
                 {
                     self->handle_stream_error(ec);
                     return;
                 }
+
+                self->metrics_sink_.record_bytes_read(count);
 
                 self->handle_message();
             }));
@@ -278,12 +286,15 @@ void TCPSession::do_write()
 
         asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
             asio::bind_executor(strand_,
-                [self = shared_from_this(), packet](boost::system::error_code ec, size_t){
+                [self = shared_from_this(), packet](boost::system::error_code ec,
+                                                    size_t count){
                     if (ec)
                     {
                         self->handle_stream_error(ec);
                         return;
                     }
+
+                    self->metrics_sink_.record_bytes_sent(count);
 
                     // Call this function again to post another async_write call.
                     self->do_write();
@@ -332,12 +343,15 @@ void TCPSession::do_write()
 
             asio::async_write(socket_, current_payload_.packet_slices,
             asio::bind_executor(strand_,
-                [self = shared_from_this()](boost::system::error_code ec, size_t){
+                [self = shared_from_this()](boost::system::error_code ec,
+                                            size_t count){
                     if (ec)
                     {
                         self->handle_stream_error(ec);
                         return;
                     }
+
+                    self->metrics_sink_.record_bytes_sent(count);
 
                     // Call this function again to post another async_write call.
                     self->do_write();
