@@ -81,7 +81,7 @@ public:
 
     // Schedule a write into the list of metrics for this shard.
     // This is decided on by the orchestrator.
-    void schedule_metrics_pull(std::vector<MetricsSnapshot> & shard_history)
+    void schedule_metrics_pull(SnapshotList & shard_history)
     {
         asio::post(cntx_, [this, shard_history](){
             record_metrics(shard_history);
@@ -247,7 +247,7 @@ private:
     }
 
     // On this shard's thread, we write into the orchestrator's metric history.
-    void record_metrics(std::vector<MetricsSnapshot> & shard_history)
+    void record_metrics(SnapshotList & shard_history)
     {
         // Generate a snapshot from our metrics.
         MetricsSnapshot snapshot = metrics_.fetch_snapshot();

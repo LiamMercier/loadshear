@@ -10,13 +10,7 @@
 //
 // We absolutely do not want any way for ShardMetrics for shard A and B to
 // get placed beside each other in memory. Rare, but possible if we make future changes.
-#ifdef __cpp_lib_hardware_interference_size
-static constexpr size_t ALIGNMENT = std::hardware_destructive_interference_size;
-#else
-static constexpr size_t ALIGNMENT = 64;
-#endif
-
-struct alignas(ALIGNMENT) ShardMetrics
+struct alignas(CACHE_ALIGNMENT) ShardMetrics
 {
 public:
     void record_connection_latency(uint64_t latency_us);
