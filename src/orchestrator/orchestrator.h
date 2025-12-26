@@ -2,6 +2,7 @@
 
 #include "action-descriptor.h"
 #include "orchestrator-config.h"
+#include "orchestrator-metrics.h"
 #include "shard.h"
 #include "logger.h"
 
@@ -15,6 +16,8 @@ public:
 using MessageHandlerFactory = Shard<Session>::MessageHandlerFactory;
 using NotifyShardClosed = Shard<Session>::NotifyShardClosed;
 
+static constexpr uint64_t DEFAULT_METRICS_INTERVAL_MS = 500;
+
 public:
     Orchestrator(std::vector<ActionDescriptor> actions,
                  std::vector<PayloadDescriptor> payloads,
@@ -22,11 +25,24 @@ public:
                  OrchestratorConfig<Session> config)
     :work_guard_((asio::make_work_guard(cntx_))),
     dispatch_timer_(cntx_),
+    metrics_timer_(cntx_),
     actions_(std::move(actions)),
     config_(std::move(config)),
     payload_manager_(std::make_shared<PayloadManager>(std::move(payloads),
                                                       std::move(counter_steps)))
     {
+        // Ensure we have data for the metric lists.
+        metrics_.shard_metric_history.resize(config_.shard_count);
+
+        // Reserve data for the underlying lists.
+        auto last_action = actions_.back();
+        size_t num_metrics = last_action.offset / metrics_interval_ms_;
+
+        // Give a few entries of space in case a handler runs long.
+        num_metrics += 3;
+
+        metrics_.reserve_lists(num_metrics);
+
         // Try to create shards.
         shards_.reserve(config_.shard_count);
         shard_ranges_.reserve(config_.shard_count);
@@ -68,6 +84,9 @@ public:
         asio::post(cntx_, [this](){
             dispatch_pending_actions();
         });
+
+        // Begin metrics loop.
+        schedule_metrics_snapshot();
 
         // Run io_context on this thread.
         cntx_.run();
@@ -216,6 +235,37 @@ private:
         }
     }
 
+    // Schedule a post to each shard to get metrics.
+    void schedule_metrics_snapshot()
+    {
+        metrics_timer_.expires_after(metrics_interval_ms_);
+        metrics_timer_.async_wait([this](const boost::system::error_code & ec){
+            if (ec)
+            {
+                return;
+            }
+
+            do_request_metrics();
+        });
+    }
+
+    // Go over each shard and post a request to the io context, then restart the timer.
+    void do_request_metrics()
+    {
+        for (size_t i = 0; i < shards_.size(); i++)
+        {
+            auto & shard = shards_[i];
+
+            if (shard)
+            {
+                auto & metric_history = metrics_.shard_metric_history[i];
+                shard->schedule_metrics_pull(metric_history);
+            }
+        }
+
+        schedule_metrics_snapshot();
+    }
+
     void shard_exit_callback()
     {
         // subtraction only happens after fetch.
@@ -242,6 +292,10 @@ private:
 
         shutdown_ = true;
 
+        boost::system::error_code ec;
+        dispatch_timer_.cancel(ec);
+        metrics_timer_.cancel(ec);
+
         Logger::info("All actions executed, program will spin down.");
 
         for (const auto & shard : shards_)
@@ -259,6 +313,10 @@ private:
     asio::executor_work_guard<asio::io_context::executor_type> work_guard_;
     asio::steady_timer dispatch_timer_;
     std::chrono::steady_clock::time_point startup_time_;
+
+    asio::steady_timer metrics_timer_;
+    std::chrono::milliseconds metrics_interval_ms_{DEFAULT_METRICS_INTERVAL_MS};
+
     std::atomic<size_t> active_shards_{0};
     bool shutdown_{false};
 
@@ -272,4 +330,7 @@ private:
     std::vector<std::unique_ptr<Shard<Session>>> shards_;
     // pairs of [start, end) ranges.
     std::vector<std::pair<uint32_t, uint32_t>> shard_ranges_;
+
+    // metrics
+    OrchestratorMetrics metrics_;
 };

@@ -83,7 +83,7 @@ public:
     // This is decided on by the orchestrator.
     void schedule_metrics_pull(SnapshotList & shard_history)
     {
-        asio::post(cntx_, [this, shard_history](){
+        asio::post(cntx_, [this, &shard_history](){
             record_metrics(shard_history);
         });
     }
