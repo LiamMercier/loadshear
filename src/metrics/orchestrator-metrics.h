@@ -15,5 +15,8 @@ static constexpr size_t ALIGNMENT = 64;
 // TODO: decide on write method.
 struct alignas(ALIGNMENT) OrchestratorMetrics
 {
-    ShardMetrics metrics;
+    // Hold a history of metric snapshots for each shard.
+    std::vector<std::vector<MetricsSnapshot>> shard_metric_history;
 }
+
+// TODO: preallocate vectors based on last offset time.

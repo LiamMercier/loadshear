@@ -79,6 +79,15 @@ public:
     // TODO: overload submit_work to take a list of work instead of many posts
     //       if we want to do the same thing many times.
 
+    // Schedule a write into the list of metrics for this shard.
+    // This is decided on by the orchestrator.
+    void schedule_metrics_pull(std::vector<MetricsSnapshot> & shard_history)
+    {
+        asio::post(cntx_, [this, shard_history](){
+            record_metrics(shard_history);
+        });
+    }
+
     // The orchestrator calls stop if the shard is taking too long to shutdown.
     void stop()
     {
@@ -235,6 +244,18 @@ private:
 
         // Reset work guard now.
         work_guard_.reset();
+    }
+
+    // On this shard's thread, we write into the orchestrator's metric history.
+    void record_metrics(std::vector<MetricsSnapshot> & shard_history)
+    {
+        // Generate a snapshot from our metrics.
+        MetricsSnapshot snapshot = metrics_.fetch_snapshot();
+
+        // We also need to grab the current number of session's from the pool.
+        snapshot.connected_sessions = session_pool_.active_sessions();
+
+        shard_history.push_back(std::move(snapshot));
     }
 
 private:
