@@ -378,6 +378,14 @@ ParseResult Interpreter::verify_script()
         return arbitrary_error(std::move(e_msg));
     }
 
+    // Check that there is at least one action.
+    if (orchestrator.actions.size() == 0)
+    {
+        std::string e_msg = styled_string("ORCHESTRATOR", PrintStyle::BadField)
+                            + " has no actions defined";
+        return arbitrary_error(std::move(e_msg));
+    }
+
     // Now, we must check the validity of each action we issue.
     //
     // - For CREATE, we must have at least as many session's as shards
