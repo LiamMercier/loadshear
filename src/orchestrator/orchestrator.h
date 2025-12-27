@@ -252,16 +252,45 @@ private:
     // Go over each shard and post a request to the io context, then restart the timer.
     void do_request_metrics()
     {
-        for (size_t i = 0; i < shards_.size(); i++)
+        size_t num_shards = shards_.size();
+
+        pending_metric_pulls_.store(num_shards, std::memory_order_relaxed);
+
+        auto cb = [this](){
+                    this->shard_metrics_callback();
+                };
+
+        for (size_t i = 0; i < num_shards; i++)
         {
             auto & shard = shards_[i];
 
             if (shard)
             {
                 auto & metric_history = metrics_.shard_metric_history[i];
-                shard->schedule_metrics_pull(metric_history);
+
+                shard->schedule_metrics_pull(metric_history,
+                                             cb);
             }
         }
+
+    }
+
+    void shard_metrics_callback()
+    {
+        size_t remaining = pending_metric_pulls_.fetch_sub
+                                        (1, std::memory_order_acq_rel) - 1;
+
+        if (remaining == 0)
+        {
+            asio::post(cntx_, [this](){
+                on_metrics_round_complete();
+            });
+        }
+    }
+
+    void on_metrics_round_complete()
+    {
+        // TODO: gather and display metrics.
 
         schedule_metrics_snapshot();
     }
@@ -333,4 +362,5 @@ private:
 
     // metrics
     OrchestratorMetrics metrics_;
+    alignas(CACHE_ALIGNMENT) std::atomic<size_t> pending_metric_pulls_{0};
 };

@@ -26,6 +26,8 @@ public:
     using MessageHandlerFactory = std::function<std::unique_ptr<MessageHandler>()>;
     using NotifyShardClosed = std::function<void()>;
 
+    using NotifyMetricsWrite = std::function<void()>;
+
 public:
 
     Shard(std::shared_ptr<const PayloadManager> manager_ptr,
@@ -76,16 +78,21 @@ public:
         return true;
     }
 
-    // TODO: overload submit_work to take a list of work instead of many posts
-    //       if we want to do the same thing many times.
-
     // Schedule a write into the list of metrics for this shard.
     // This is decided on by the orchestrator.
-    void schedule_metrics_pull(SnapshotList & shard_history)
+    void schedule_metrics_pull(SnapshotList & shard_history,
+                               NotifyMetricsWrite write_cb)
     {
-        asio::post(cntx_, [this, &shard_history](){
-            record_metrics(shard_history);
-        });
+        auto history_ptr = &shard_history;
+
+        asio::post(cntx_,
+            [this,
+             history_ptr,
+             cb = std::move(write_cb)](){
+
+                record_metrics(*history_ptr);
+                cb();
+            });
     }
 
     // The orchestrator calls stop if the shard is taking too long to shutdown.
