@@ -15,6 +15,7 @@ public:
 
 using MessageHandlerFactory = Shard<Session>::MessageHandlerFactory;
 using NotifyShardClosed = Shard<Session>::NotifyShardClosed;
+using MetricsSink = std::function<void(MetricsAggregate data)>;
 
 static constexpr uint64_t DEFAULT_METRICS_INTERVAL_MS = 500;
 
@@ -22,14 +23,16 @@ public:
     Orchestrator(std::vector<ActionDescriptor> actions,
                  std::vector<PayloadDescriptor> payloads,
                  std::vector<uint16_t> counter_steps,
-                 OrchestratorConfig<Session> config)
+                 OrchestratorConfig<Session> config,
+                 MetricsSink metrics_sink)
     :work_guard_((asio::make_work_guard(cntx_))),
     dispatch_timer_(cntx_),
     metrics_timer_(cntx_),
     actions_(std::move(actions)),
     config_(std::move(config)),
     payload_manager_(std::make_shared<PayloadManager>(std::move(payloads),
-                                                      std::move(counter_steps)))
+                                                      std::move(counter_steps))),
+    metrics_sink_(std::move(metrics_sink))
     {
         // Ensure we have data for the metric lists.
         metrics_.shard_metric_history.resize(config_.shard_count);
@@ -296,7 +299,8 @@ private:
         MetricsAggregate data = metrics_.get_aggregate_delta();
         data.offset = (std::chrono::steady_clock::now() - startup_time_);
 
-        // TODO: display metrics.
+        // Give metric data to whatever interface created this object.
+        metrics_sink_(std::move(data));
 
         schedule_metrics_snapshot();
     }
@@ -369,4 +373,5 @@ private:
     // metrics
     OrchestratorMetrics metrics_;
     alignas(CACHE_ALIGNMENT) std::atomic<size_t> pending_metric_pulls_{0};
+    MetricsSink metrics_sink_;
 };

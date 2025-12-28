@@ -13,7 +13,7 @@ public:
 
     int run();
 
-    // TODO: sigint() or interrupt() for handling ctrl-c from user.
+    // TODO <feature>: sigint() or interrupt() for handling ctrl-c from user.
 
 private:
     int execute_script(const DSLData & script);
@@ -26,6 +26,8 @@ private:
                  const DSLData & data);
 
     bool request_acknowledgement(std::string endpoints_list);
+
+    void metric_sink(MetricsAggregate data);
 
 private:
     const CLIOptions cli_ops_;

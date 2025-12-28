@@ -26,7 +26,7 @@ public:
     using MessageHandlerFactory = std::function<std::unique_ptr<MessageHandler>()>;
     using NotifyShardClosed = std::function<void()>;
 
-    using NotifyMetricsWrite = std::function<void()>;
+    using NotifyMetricsWrite = std::move_only_function<void()>;
 
 public:
 
@@ -81,14 +81,14 @@ public:
     // Schedule a write into the list of metrics for this shard.
     // This is decided on by the orchestrator.
     void schedule_metrics_pull(SnapshotList & shard_history,
-                               NotifyMetricsWrite write_cb)
+                               NotifyMetricsWrite && write_cb)
     {
         auto history_ptr = &shard_history;
 
         asio::post(cntx_,
             [this,
              history_ptr,
-             cb = std::move(write_cb)](){
+             cb = std::move(write_cb)]() mutable {
 
                 record_metrics(*history_ptr);
                 cb();

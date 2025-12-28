@@ -151,11 +151,15 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
     });
 
     // Create the orchestrator.
+    auto metric_sink = [](MetricsAggregate data){
+            return;
+        };
 
     Orchestrator<TCPSession> orchestrator(actions,
                                           payloads,
                                           steps,
-                                          orchestrator_config);
+                                          orchestrator_config,
+                                          metric_sink);
 
     // Start the orchestrator.
     orchestrator.start();
@@ -329,11 +333,15 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
     });
 
     // Create the orchestrator.
+    auto metric_sink = [](MetricsAggregate data){
+            return;
+        };
 
     Orchestrator<TCPSession> orchestrator(actions,
                                           payloads,
                                           steps,
-                                          orchestrator_config);
+                                          orchestrator_config,
+                                          metric_sink);
 
     // Start the orchestrator.
     orchestrator.start();

@@ -188,13 +188,18 @@ int CLI::execute_script(const DSLData & script)
 template <typename Session>
 int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 {
+    auto metric_sink = [this](MetricsAggregate data){
+            this->metric_sink(std::move(data));
+            return;
+        };
 
     try
     {
         Orchestrator<Session> orchestrator(plan.actions,
                                            plan.payloads,
                                            plan.counter_steps,
-                                           plan.config);
+                                           plan.config,
+                                           std::move(metric_sink));
 
         Logger::info("\nStarting orchestrator loop");
 
@@ -361,4 +366,9 @@ bool CLI::request_acknowledgement(std::string endpoints_list)
 
     Logger::info("\nAborting");
     return false;
+}
+
+void CLI::metric_sink(MetricsAggregate data)
+{
+    // TODO: display data
 }
