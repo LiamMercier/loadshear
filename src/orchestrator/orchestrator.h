@@ -288,9 +288,15 @@ private:
         }
     }
 
+    // At this point, every shard has written its data, handle gathering it
+    // and starting the next snapshot timer.
     void on_metrics_round_complete()
     {
-        // TODO: gather and display metrics.
+        // Aggregate the data across each shard and get results.
+        MetricsAggregate data = metrics_.get_aggregate_delta();
+        data.offset = (std::chrono::steady_clock::now() - startup_time_);
+
+        // TODO: display metrics.
 
         schedule_metrics_snapshot();
     }

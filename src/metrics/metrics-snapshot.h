@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <chrono>
 
 #ifdef __cpp_lib_hardware_interference_size
 static constexpr size_t CACHE_ALIGNMENT = std::hardware_destructive_interference_size;
@@ -8,8 +9,28 @@ static constexpr size_t CACHE_ALIGNMENT = std::hardware_destructive_interference
 static constexpr size_t CACHE_ALIGNMENT = 64;
 #endif
 
+// A snapshot of data from the shard (or aggregate of all shard data).
 struct MetricsSnapshot
 {
+    MetricsSnapshot & operator+=(const MetricsSnapshot & rhs)
+    {
+        bytes_sent += rhs.bytes_sent;
+        bytes_read += rhs.bytes_read;
+
+        connection_attempts += rhs.connection_attempts;
+        failed_connections += rhs.failed_connections;
+        finished_connections += rhs.finished_connections;
+
+        connected_sessions += rhs.connected_sessions;
+
+        for (size_t i = 0; i < connection_latency_buckets.size(); i++)
+        {
+            connection_latency_buckets[i] += rhs.connection_latency_buckets[i];
+        }
+
+        return *this;
+    }
+
     uint64_t bytes_sent{0};
     uint64_t bytes_read{0};
 
@@ -17,12 +38,80 @@ struct MetricsSnapshot
     uint64_t failed_connections{0};
     uint64_t finished_connections{0};
 
-    // This must be filled by the shard during the request
+    // This must be filled by the shards during the request
     // since our ShardMetrics object does not have access to the
     // SessionPool to grab the data.
     uint64_t connected_sessions{0};
 
     std::array<uint64_t, 16> connection_latency_buckets{};
+};
+
+// Signed version of MetricsSnapshot, most fields should never be negative
+// but this does prevent overflow from program logic errors.
+struct MetricsDelta
+{
+    inline void compute_difference(const MetricsSnapshot & current,
+                                   const MetricsSnapshot & previous);
+
+    int64_t bytes_sent{0};
+    int64_t bytes_read{0};
+
+    int64_t connection_attempts{0};
+    int64_t failed_connections{0};
+    int64_t finished_connections{0};
+
+    // It's likely this will be negative when winding down.
+    int64_t connected_sessions{0};
+
+    std::array<int64_t, 16> connection_latency_buckets{};
+};
+
+inline void MetricsDelta::compute_difference(const MetricsSnapshot & current,
+                                             const MetricsSnapshot & previous)
+{
+    // Calculate the change between snapshots.
+    bytes_sent = static_cast<int64_t>(current.bytes_sent)
+                 - static_cast<int64_t>(previous.bytes_sent);
+
+    bytes_read = static_cast<int64_t>(current.bytes_read)
+                 - static_cast<int64_t>(previous.bytes_read);
+
+    connection_attempts = static_cast<int64_t>(current.connection_attempts)
+                          - static_cast<int64_t>(previous.connection_attempts);
+
+    failed_connections = static_cast<int64_t>(current.failed_connections)
+                         - static_cast<int64_t>(previous.failed_connections);
+
+    finished_connections = static_cast<int64_t>(current.finished_connections)
+                           - static_cast<int64_t>(previous.finished_connections);
+
+    connected_sessions = static_cast<int64_t>(current.connected_sessions)
+                         - static_cast<int64_t>(previous.connected_sessions);
+
+    for (size_t i = 0; i < connection_latency_buckets.size(); i++)
+    {
+        connection_latency_buckets[i] = static_cast<int64_t>
+                                            (
+                                                current.connection_latency_buckets[i]
+                                            )
+                                        - static_cast<int64_t>
+                                            (
+                                                previous.connection_latency_buckets[i]
+                                            );
+    }
+}
+
+// Hold the current snapshot and change from the last snapshot.
+struct MetricsAggregate
+{
+    // Newest metric snapshot aggregated across all shards.
+    MetricsSnapshot current_snapshot_aggregate;
+
+    // Difference between this snapshot and the last.
+    MetricsDelta change_aggregate;
+
+    // Time offset from startup.
+    std::chrono::steady_clock::duration offset;
 };
 
 // Each list reference is aligned so we never do false sharing when shards
