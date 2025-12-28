@@ -9,6 +9,10 @@
 
 #include <iostream>
 
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+
 //
 // Helpers
 //
@@ -165,6 +169,7 @@ int CLI::execute_script(const DSLData & script)
             if (cli_ops_.quiet)
             {
                 Logger::set_level(LogLevel::WARN);
+                return start_orchestrator_loop_uninteractive(std::move(plan));
             }
 
             // Now, start the program's main loop
@@ -193,6 +198,145 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             return;
         };
 
+    // TUI related logic using FTXUI.
+    using namespace ftxui;
+
+    // Only used in this function.
+    struct TUIState {
+        std::mutex mutex;
+        MetricsAggregate metrics;
+    };
+
+    auto tui_state = std::make_shared<TUIState>();
+    auto screen = ScreenInteractive::Fullscreen();
+
+    auto tui_renderer = Renderer([tui_state](){
+        std::lock_guard<std::mutex> lock(tui_state->mutex);
+
+        auto & metrics = tui_state->metrics;
+        auto & totals = metrics.current_snapshot_aggregate;
+        auto & deltas = metrics.change_aggregate;
+
+        using namespace ftxui;
+
+        // TODO: Read docs and make this actually useful instead of placeholder information.
+        auto header = text("Orchestrator Status") | bold | center;
+
+        auto metrics_box = vbox({
+            text("Total Written: " + std::to_string(totals.bytes_sent)),
+            text("Total Read: " + std::to_string(totals.bytes_read)),
+
+            text("Active connections: " + std::to_string(totals.connected_sessions)),
+
+            text("Attempted connections: " + std::to_string(totals.connection_attempts)),
+            text("Failed connections: " + std::to_string(totals.failed_connections)),
+            text("Finished connections: " + std::to_string(totals.finished_connections))
+        });
+
+        auto footer = text("Press q to quit.") | dim;
+
+        return vbox({header,
+                    separator(),
+                    metrics_box | border,
+                    separator(),
+                    footer}) | border;
+    });
+
+    // Set quitting to q like with gdb.
+    auto main_component = CatchEvent(tui_renderer,
+            [&](Event event){
+                if (event == Event::Character('q')
+                    || event == Event::Character('Q')
+                    || event == Event::Escape)
+                {
+                    screen.ExitLoopClosure()();
+
+                    // TODO <feature>: setup orchestrator closure like with CTRL-C.
+                    return true;
+                }
+
+                return false;
+            });
+
+    auto metric_sink_tui = [metric_sink = std::move(metric_sink),
+                            &screen,
+                            tui_state](MetricsAggregate data) {
+        // Write any data to disk if we are meant to do so.
+        metric_sink(data);
+
+        // Update data and wake up the screen thread.
+        {
+            std::lock_guard<std::mutex> lock(tui_state->mutex);
+            tui_state->metrics = std::move(data);
+        }
+
+        screen.PostEvent(ftxui::Event::Custom);
+    };
+
+    // Orchestrator spinup logic.
+    std::thread orchestrator_thread;
+
+    try
+    {
+        Orchestrator<Session> orchestrator(plan.actions,
+                                           plan.payloads,
+                                           plan.counter_steps,
+                                           plan.config,
+                                           std::move(metric_sink_tui));
+
+        Logger::info("\nStarting orchestrator loop");
+
+        orchestrator_thread = std::thread([&orchestrator,
+                                           tui_state,
+                                           &screen](){
+            try
+            {
+                orchestrator.start();
+            }
+            catch (const std::exception & error)
+            {
+                std::string e_msg = "Caught exception in orchestrator loop: "
+                                    + std::string(error.what());
+                Logger::error(std::move(e_msg));
+            }
+
+            // After orchestrator finishes, try to close the screen thread.
+            screen.PostEvent(ftxui::Event::Custom);
+            screen.ExitLoopClosure()();
+        });
+
+        // TODO: figure out what happens if we log during this.
+        // As soon as we spin up the orchestrator thread, start UI loop in main thread.
+        screen.Loop(main_component);
+
+        if (orchestrator_thread.joinable())
+        {
+            orchestrator_thread.join();
+        }
+
+        // We will exit when the orchestrator is done.
+    }
+    catch (const std::exception & error)
+    {
+        std::string e_msg = "Caught exception in orchestrator construction: "
+                            + std::string(error.what());
+        Logger::error(std::move(e_msg));
+
+        return 1;
+    }
+
+    return 0;
+}
+
+template <typename Session>
+int CLI::start_orchestrator_loop_uninteractive(ExecutionPlan<Session> plan)
+{
+    auto metric_sink = [this](MetricsAggregate data){
+            this->metric_sink(std::move(data));
+            return;
+        };
+
+    // Orchestrator spinup logic.
     try
     {
         Orchestrator<Session> orchestrator(plan.actions,
@@ -370,5 +514,5 @@ bool CLI::request_acknowledgement(std::string endpoints_list)
 
 void CLI::metric_sink(MetricsAggregate data)
 {
-    // TODO: display data
+    // TODO: write to files if necessary.
 }

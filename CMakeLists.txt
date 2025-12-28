@@ -20,16 +20,13 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/wasmtime/crates/c-api $
 
 include(FetchContent)
 
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG v1.17.0
+FetchContent_Declare(ftxui
+    GIT_REPOSITORY https://github.com/arthursonzogni/ftxui.git
+    GIT_TAG v6.1.9
     GIT_SHALLOW TRUE
 )
 
-FetchContent_MakeAvailable(googletest)
-
-enable_testing()
+FetchContent_MakeAvailable(ftxui)
 
 find_package(Boost REQUIRED COMPONENTS
     system
@@ -49,6 +46,17 @@ add_subdirectory(src/interpreter)
 add_subdirectory(src/resolver)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.17.0
+        GIT_SHALLOW TRUE
+    )
+
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+
     add_subdirectory(tests)
 endif()
 

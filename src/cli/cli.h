@@ -22,6 +22,9 @@ private:
     int start_orchestrator_loop(ExecutionPlan<Session> plan);
 
     template <typename Session>
+    int start_orchestrator_loop_uninteractive(ExecutionPlan<Session> plan);
+
+    template <typename Session>
     void dry_run(const ExecutionPlan<Session> & plan,
                  const DSLData & data);
 
