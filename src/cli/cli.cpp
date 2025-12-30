@@ -13,6 +13,8 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 
+#include "create-histogram.h"
+
 //
 // Helpers
 //
@@ -219,7 +221,8 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
         using namespace ftxui;
 
-        // TODO: Read docs and make this actually useful instead of placeholder information.
+        // TODO: right arrow turns plots from diff to totals, left turns back?
+
         auto header = text("Orchestrator Status") | bold | center;
 
         auto metrics_box = vbox({
@@ -233,11 +236,16 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             text("Finished connections: " + std::to_string(totals.finished_connections))
         });
 
+        auto hist = generate_histogram(totals.connection_latency_buckets,
+                                       "Connection Latency");
+
         auto footer = text("Press q to quit.") | dim;
 
         return vbox({header,
                     separator(),
                     metrics_box | border,
+                    separator(),
+                    hist,
                     separator(),
                     footer}) | border;
     });

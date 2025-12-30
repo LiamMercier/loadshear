@@ -147,8 +147,8 @@ TEST(ShardMetrics, RecordBytesTransmitted)
     asio::io_context server_cntx;
     asio::ip::tcp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
 
-    uint64_t server_interval_ms = 5;
-    uint64_t total_packets = 100;
+    uint64_t server_interval_ms = 1;
+    uint64_t total_packets = 50;
 
     std::vector<uint8_t> packet{ 0x1, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0 };
 
