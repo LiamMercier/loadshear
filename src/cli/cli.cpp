@@ -223,18 +223,16 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
         using namespace ftxui;
 
-        auto header = text("Orchestrator Status") | bold | center;
-
         // Display throughput metrics.
         auto bytes_header = text("Throughput") | bold | center;
 
         auto bytes_box = vbox({
-            create_numeric_display("sent: ",
-                                   totals.bytes_sent,
-                                   deltas.bytes_sent),
-            create_numeric_display("read: ",
-                                   totals.bytes_read,
-                                   deltas.bytes_read)
+            create_bytes_display("sent: ",
+                                 totals.bytes_sent,
+                                 deltas.bytes_sent),
+            create_bytes_display("read: ",
+                                 totals.bytes_read,
+                                 deltas.bytes_read)
         });
 
         // Display connection metrics.
@@ -258,29 +256,29 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
         auto metrics_box = vbox({
             bytes_header,
+            separator(),
             bytes_box,
+            separator(),
             connections_header,
+            separator(),
             connections_box
         });
-
-        // text("Active connections: " + std::to_string(totals.connected_sessions)),
-        //
-        // text("Attempted connections: " + std::to_string(totals.connection_attempts)),
-        // text("Failed connections: " + std::to_string(totals.failed_connections)),
-        // text("Finished connections: " + std::to_string(totals.finished_connections))
 
         auto hist = generate_histogram(totals.connection_latency_buckets,
                                        "Connection Latency");
 
+        auto metrics_row = hbox({
+            metrics_box | size(WIDTH, EQUAL, 28),
+            separator(),
+            hist
+        });
+
         auto footer = text("Press q to quit.") | dim;
 
-        return vbox({header,
+        return vbox({text(""),
+                    metrics_row,
                     separator(),
-                    metrics_box | border,
-                    separator(),
-                    hist,
-                    separator(),
-                    footer}) | border;
+                    footer});
     });
 
     // TODO: right arrow turns plots from diff to totals, left turns back?

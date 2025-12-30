@@ -221,7 +221,7 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
         text(title) | bold | center,
         separator(),
         body
-    }) | border;
+    });
 
     return hist;
 }
