@@ -26,7 +26,7 @@ template<typename BucketType>
 inline ftxui::Element generate_histogram(const BucketType & buckets,
                                          std::string title,
                                          int height = 8,
-                                         int bin_width = 3)
+                                         int bin_width = 4)
 {
     using namespace ftxui;
 
@@ -77,18 +77,57 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
     };
 
     // Lambda to quickly decide on LightGreen, Green, Yellow, Red
+    // auto rgb_interp = [&](int column) -> Color {
+    //
+    //     double t = double(column) / double(std::max(1, width - 1));
+    //
+    //     if (t < 0.5)
+    //     {
+    //         return (t < 0.25) ? Color(Color::Green) : Color(Color::LightGreen);
+    //     }
+    //     else
+    //     {
+    //         return (t < 0.75) ? Color(Color::Yellow) : Color(Color::Red);
+    //     }
+    //
+    // };
+
     auto rgb_interp = [&](int column) -> Color {
+
+        Color light_teal = Color::RGB(120, 220, 210);
+        Color teal = Color::RGB(20, 130, 120);
+        Color purple = Color::RGB(140, 70, 180);
+        Color red = Color::RGB(220, 50, 50);
+
+        std::vector<Color> colors = {light_teal, teal, purple, red};
+        std::vector<double> stops = {0.0f, 0.60f, 0.80f, 1.0f};
 
         double t = double(column) / double(std::max(1, width - 1));
 
-        if (t < 0.5)
+        // Ensure t is in [0, 1]
+        if (t > 1.0)
         {
-            return (t < 0.25) ? Color(Color::Green) : Color(Color::LightGreen);
+            t = 1.0;
         }
-        else
+        else if (t < 0.0)
         {
-            return (t < 0.75) ? Color(Color::Yellow) : Color(Color::Red);
+            t = 0.0;
         }
+
+        size_t i = 0;
+        while (i < stops.size() - 1 && t > stops[i + 1])
+        {
+            i++;
+        }
+
+        if (i >= colors.size() - 1)
+        {
+            return colors.back();
+        }
+
+        double t_segment = (t - stops[i]) / (stops[i+1] - stops[i]);
+
+        return Color::Interpolate(t_segment, colors[i], colors[i+1]);
 
     };
 
@@ -158,10 +197,10 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
     for (size_t i = 0; i < columns.size(); i++)
     {
         spaced_columns.push_back(columns[i]);
-        if (i + 1 < columns.size())
-        {
-            spaced_columns.push_back(text(" "));
-        }
+        // if (i + 1 < columns.size())
+        // {
+        //     spaced_columns.push_back(text(" "));
+        // }
     }
 
     // Build the Y axis.
