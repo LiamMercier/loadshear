@@ -14,6 +14,7 @@
 #include <ftxui/dom/elements.hpp>
 
 #include "create-histogram.h"
+#include "create-numeric-display.h"
 
 //
 // Helpers
@@ -213,6 +214,7 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
     auto screen = ScreenInteractive::Fullscreen();
 
     auto tui_renderer = Renderer([tui_state](){
+        // TODO: should we maybe copy data and drop the lock instead?
         std::lock_guard<std::mutex> lock(tui_state->mutex);
 
         auto & metrics = tui_state->metrics;
@@ -221,20 +223,51 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
         using namespace ftxui;
 
-        // TODO: right arrow turns plots from diff to totals, left turns back?
-
         auto header = text("Orchestrator Status") | bold | center;
 
-        auto metrics_box = vbox({
-            text("Total Written: " + std::to_string(totals.bytes_sent)),
-            text("Total Read: " + std::to_string(totals.bytes_read)),
+        // Display throughput metrics.
+        auto bytes_header = text("Throughput") | bold | center;
 
-            text("Active connections: " + std::to_string(totals.connected_sessions)),
-
-            text("Attempted connections: " + std::to_string(totals.connection_attempts)),
-            text("Failed connections: " + std::to_string(totals.failed_connections)),
-            text("Finished connections: " + std::to_string(totals.finished_connections))
+        auto bytes_box = vbox({
+            create_numeric_display("sent: ",
+                                   totals.bytes_sent,
+                                   deltas.bytes_sent),
+            create_numeric_display("read: ",
+                                   totals.bytes_read,
+                                   deltas.bytes_read)
         });
+
+        // Display connection metrics.
+        auto connections_header = text("Connections") | bold | center;
+
+        auto connections_box = vbox({
+            create_numeric_display("active: ",
+                                   totals.connected_sessions,
+                                   deltas.connected_sessions),
+
+            create_numeric_display("attempted: ",
+                                   totals.connection_attempts,
+                                   deltas.connection_attempts),
+            create_numeric_display("failed: ",
+                                   totals.failed_connections,
+                                   deltas.failed_connections),
+            create_numeric_display("successful: ",
+                                   totals.finished_connections,
+                                   deltas.finished_connections)
+        });
+
+        auto metrics_box = vbox({
+            bytes_header,
+            bytes_box,
+            connections_header,
+            connections_box
+        });
+
+        // text("Active connections: " + std::to_string(totals.connected_sessions)),
+        //
+        // text("Attempted connections: " + std::to_string(totals.connection_attempts)),
+        // text("Failed connections: " + std::to_string(totals.failed_connections)),
+        // text("Finished connections: " + std::to_string(totals.finished_connections))
 
         auto hist = generate_histogram(totals.connection_latency_buckets,
                                        "Connection Latency");
@@ -250,6 +283,7 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
                     footer}) | border;
     });
 
+    // TODO: right arrow turns plots from diff to totals, left turns back?
     // Set quitting to q like with gdb.
     auto main_component = CatchEvent(tui_renderer,
             [&](Event event){
