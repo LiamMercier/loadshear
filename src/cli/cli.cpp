@@ -267,6 +267,19 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
         auto hist = generate_histogram(totals.connection_latency_buckets,
                                        "Connection Latency");
 
+        // std::array<uint64_t, 16> test = {14,  27, 50,  71,
+        //                                  80, 91, 127, 104,
+        //                                  88, 73, 68,  61,
+        //                                  40, 32, 20,  9};
+        //
+        // for (size_t i = 0; i < test.size(); i++)
+        // {
+        //     test[i] = test[i] * 1000;
+        // }
+        //
+        // auto hist = generate_histogram(test,
+        //                                "Connection Latency", 12);
+
         auto metrics_row = hbox({
             metrics_box | size(WIDTH, EQUAL, 28),
             separator(),

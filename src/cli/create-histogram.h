@@ -6,22 +6,36 @@
 
 #include <ftxui/dom/elements.hpp>
 
-const std::vector<std::string> latency_labels = {
+#include "color-scheme.h"
+#include "numeric-strings.h"
+
+const std::array<std::string, 16> latency_labels = {
     "64 ", "128", "256", "512", "1  ", "2  ",
     "4  ", "8  ", "16 ", "32 ", "64 ", "128",
     "256", "512", "1  ", "2  "
 };
 
-const std::vector<std::string> unit_labels = {
+const std::array<std::string, 16> unit_labels = {
     "us ", "us ", "us ", "us ", "ms ", "ms ",
     "ms ", "ms ", "ms ", "ms ", "ms ", "ms ",
     "ms ", "ms ", "s  ", "s  "
 };
 
+static const std::array<ftxui::Color, 5> hist_colors =
+                {
+                    scheme_light_teal, scheme_teal, scheme_teal,
+                    scheme_purple, scheme_red
+                };
+
+static const std::array<double, 5> hist_stops =
+                {
+                    0.0f, 0.35f, 0.55f,
+                    0.80f, 1.0f
+                };
+
 // Fill the entire character space.
 const std::string block_char = std::string(reinterpret_cast<const char*>(u8"\u2588"));
 
-// TODO: fine tuned styling that looks better, maybe cyan color scheme instead?
 template<typename BucketType>
 inline ftxui::Element generate_histogram(const BucketType & buckets,
                                          std::string title,
@@ -33,74 +47,7 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
     uint64_t max_v = *std::max_element(buckets.begin(), buckets.end());
     int width = buckets.size();
 
-    // Fetch label string
-    // TODO: handle larger values for stuff like packet latency.
-    auto y_axis_text = [](uint64_t value) -> std::string {
-        std::string res;
-        res.reserve(6);
-
-        res += " ";
-
-        // transform [10000, 99999] -> [" 10k", " 99k"]
-        if (value >= 10 * 1000
-            && value < 100 * 1000)
-        {
-            int thousands = value / 1000;
-
-            res += std::to_string(thousands);
-            res += "k";
-        }
-        // transform [1000, 9999] -> ["1.0k", "9.9k"]
-        else if (value >= 1000
-                 && value < 10000)
-        {
-            int thousands = value / 1000;
-            int hundreds = (value % 1000) / 100;
-
-            res += std::to_string(thousands);
-            res += ".";
-            res += std::to_string(hundreds);
-            res += "k";
-        }
-        // Display [0, 999] as is.
-        else
-        {
-            res += std::to_string(value);
-
-            size_t padding = 5 - res.size();
-
-            res += std::string(padding, ' ');
-        }
-
-        res += " ";
-        return res;
-    };
-
-    // Lambda to quickly decide on LightGreen, Green, Yellow, Red
-    // auto rgb_interp = [&](int column) -> Color {
-    //
-    //     double t = double(column) / double(std::max(1, width - 1));
-    //
-    //     if (t < 0.5)
-    //     {
-    //         return (t < 0.25) ? Color(Color::Green) : Color(Color::LightGreen);
-    //     }
-    //     else
-    //     {
-    //         return (t < 0.75) ? Color(Color::Yellow) : Color(Color::Red);
-    //     }
-    //
-    // };
-
     auto rgb_interp = [&](int column) -> Color {
-
-        Color light_teal = Color::RGB(120, 220, 210);
-        Color teal = Color::RGB(20, 130, 120);
-        Color purple = Color::RGB(140, 70, 180);
-        Color red = Color::RGB(220, 50, 50);
-
-        std::vector<Color> colors = {light_teal, teal, purple, red};
-        std::vector<double> stops = {0.0f, 0.60f, 0.80f, 1.0f};
 
         double t = double(column) / double(std::max(1, width - 1));
 
@@ -115,19 +62,19 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
         }
 
         size_t i = 0;
-        while (i < stops.size() - 1 && t > stops[i + 1])
+        while (i < hist_stops.size() - 1 && t > hist_stops[i + 1])
         {
             i++;
         }
 
-        if (i >= colors.size() - 1)
+        if (i >= hist_colors.size() - 1)
         {
-            return colors.back();
+            return hist_colors.back();
         }
 
-        double t_segment = (t - stops[i]) / (stops[i+1] - stops[i]);
+        double t_segment = (t - hist_stops[i]) / (hist_stops[i+1] - hist_stops[i]);
 
-        return Color::Interpolate(t_segment, colors[i], colors[i+1]);
+        return Color::Interpolate(t_segment, hist_colors[i], hist_colors[i+1]);
 
     };
 
@@ -192,17 +139,6 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
         columns.push_back(vbox(std::move(rows)));
     }
 
-    // Place all the columns beside one another.
-    std::vector<Element> spaced_columns;
-    for (size_t i = 0; i < columns.size(); i++)
-    {
-        spaced_columns.push_back(columns[i]);
-        // if (i + 1 < columns.size())
-        // {
-        //     spaced_columns.push_back(text(" "));
-        // }
-    }
-
     // Build the Y axis.
     std::vector<Element> y_rows;
     y_rows.reserve(height + 3);
@@ -253,7 +189,7 @@ inline ftxui::Element generate_histogram(const BucketType & buckets,
     auto body = hbox({
         y_axis,
         text(" "),
-        hbox(std::move(spaced_columns))
+        hbox(std::move(columns))
     });
 
     auto hist = vbox({
