@@ -236,6 +236,8 @@ void TCPSession::do_read_body()
                                 );
 
                     self->metrics_sink_.record_read_latency(latency_us);
+
+                    self->read_sample_counter_ = 0;
                 }
 
                 self->handle_message();
@@ -340,6 +342,8 @@ void TCPSession::do_write()
                                     );
 
                         self->metrics_sink_.record_send_latency(latency_us);
+
+                        self->write_sample_counter_ = 0;
                     }
 
                     // Call this function again to post another async_write call.
@@ -387,6 +391,12 @@ void TCPSession::do_write()
 
             writing_ = true;
 
+            // Every packet_sample_rate packets, record write latency.
+            if (++write_sample_counter_ >= config_.packet_sample_rate)
+            {
+                write_start_time_ = std::chrono::steady_clock::now();
+            }
+
             asio::async_write(socket_, current_payload_.packet_slices,
             asio::bind_executor(strand_,
                 [self = shared_from_this()](boost::system::error_code ec,
@@ -398,6 +408,24 @@ void TCPSession::do_write()
                     }
 
                     self->metrics_sink_.record_bytes_sent(count);
+
+                    // If we sampled, compute the latency.
+                    if (self->write_sample_counter_ > self->config_.packet_sample_rate)
+                    {
+                        auto end = std::chrono::steady_clock::now();
+
+                        uint64_t latency_us = static_cast<uint64_t>(
+                                std::chrono::duration_cast
+                                    <std::chrono::microseconds>
+                                        (
+                                            end - self->write_start_time_
+                                        ).count()
+                                    );
+
+                        self->metrics_sink_.record_send_latency(latency_us);
+
+                        self->write_sample_counter_ = 0;
+                    }
 
                     // Call this function again to post another async_write call.
                     self->do_write();

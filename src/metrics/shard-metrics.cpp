@@ -84,6 +84,8 @@ MetricsSnapshot ShardMetrics::fetch_snapshot()
     res.finished_connections = finished_connections;
 
     res.connection_latency_buckets = connection_latency_buckets;
+    res.send_latency_buckets = send_latency_buckets;
+    res.read_latency_buckets = read_latency_buckets;
 
     return res;
 }

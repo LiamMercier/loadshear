@@ -12,6 +12,10 @@ static constexpr size_t CACHE_ALIGNMENT = 64;
 // A snapshot of data from the shard (or aggregate of all shard data).
 struct MetricsSnapshot
 {
+public:
+    static constexpr size_t NUM_BUCKETS = 16;
+
+public:
     MetricsSnapshot & operator+=(const MetricsSnapshot & rhs)
     {
         bytes_sent += rhs.bytes_sent;
@@ -23,9 +27,11 @@ struct MetricsSnapshot
 
         connected_sessions += rhs.connected_sessions;
 
-        for (size_t i = 0; i < connection_latency_buckets.size(); i++)
+        for (size_t i = 0; i < NUM_BUCKETS; i++)
         {
             connection_latency_buckets[i] += rhs.connection_latency_buckets[i];
+            send_latency_buckets[i] += rhs.send_latency_buckets[i];
+            read_latency_buckets[i] += rhs.read_latency_buckets[i];
         }
 
         return *this;
@@ -43,13 +49,19 @@ struct MetricsSnapshot
     // SessionPool to grab the data.
     uint64_t connected_sessions{0};
 
-    std::array<uint64_t, 16> connection_latency_buckets{};
+    std::array<uint64_t, NUM_BUCKETS> connection_latency_buckets{};
+    std::array<uint64_t, NUM_BUCKETS> send_latency_buckets{};
+    std::array<uint64_t, NUM_BUCKETS> read_latency_buckets{};
 };
 
 // Signed version of MetricsSnapshot, most fields should never be negative
 // but this does prevent overflow from program logic errors.
 struct MetricsDelta
 {
+public:
+    static constexpr size_t NUM_BUCKETS = MetricsSnapshot::NUM_BUCKETS;
+
+public:
     inline void compute_difference(const MetricsSnapshot & current,
                                    const MetricsSnapshot & previous);
 
@@ -63,7 +75,9 @@ struct MetricsDelta
     // It's likely this will be negative when winding down.
     int64_t connected_sessions{0};
 
-    std::array<int64_t, 16> connection_latency_buckets{};
+    std::array<int64_t, NUM_BUCKETS> connection_latency_buckets{};
+    std::array<int64_t, NUM_BUCKETS> send_latency_buckets{};
+    std::array<int64_t, NUM_BUCKETS> read_latency_buckets{};
 };
 
 inline void MetricsDelta::compute_difference(const MetricsSnapshot & current,
@@ -88,7 +102,7 @@ inline void MetricsDelta::compute_difference(const MetricsSnapshot & current,
     connected_sessions = static_cast<int64_t>(current.connected_sessions)
                          - static_cast<int64_t>(previous.connected_sessions);
 
-    for (size_t i = 0; i < connection_latency_buckets.size(); i++)
+    for (size_t i = 0; i < NUM_BUCKETS; i++)
     {
         connection_latency_buckets[i] = static_cast<int64_t>
                                             (
@@ -97,6 +111,24 @@ inline void MetricsDelta::compute_difference(const MetricsSnapshot & current,
                                         - static_cast<int64_t>
                                             (
                                                 previous.connection_latency_buckets[i]
+                                            );
+
+        send_latency_buckets[i] = static_cast<int64_t>
+                                            (
+                                                current.send_latency_buckets[i]
+                                            )
+                                        - static_cast<int64_t>
+                                            (
+                                                previous.send_latency_buckets[i]
+                                            );
+
+        read_latency_buckets[i] = static_cast<int64_t>
+                                            (
+                                                current.read_latency_buckets[i]
+                                            )
+                                        - static_cast<int64_t>
+                                            (
+                                                previous.read_latency_buckets[i]
                                             );
     }
 }

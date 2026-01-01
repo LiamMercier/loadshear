@@ -264,32 +264,25 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             connections_box
         });
 
-        // auto hist = generate_histogram(totals.connection_latency_buckets,
-        //                                "Connection Latency");
+        auto hist = generate_histogram(totals.connection_latency_buckets,
+                                       "Connection Latency");
 
-        std::array<uint64_t, 16> test = {14,  27, 50,  71,
-                                         80, 91, 127, 104,
-                                         88, 73, 68,  61,
-                                         40, 32, 20,  9};
+        auto send_hist = generate_histogram(totals.send_latency_buckets,
+                                            "Send Latency");
 
-        for (size_t i = 0; i < test.size(); i++)
-        {
-            test[i] = test[i] * 1000;
-        }
+        auto read_hist = generate_histogram(totals.read_latency_buckets,
+                                            "Read Latency");
 
-        auto hist = generate_histogram(test,
-                                       "Connection Latency", 12);
-
-        auto metrics_row = hbox({
-            metrics_box | size(WIDTH, EQUAL, 28),
-            separator(),
-            hist
+        auto columns = gridbox({
+            {metrics_box | xflex | yflex, separator(), hist | xflex | yflex},
+            {separator(), separator(), separator()},
+            {send_hist | xflex | yflex, separator(), read_hist | xflex | yflex}
         });
 
         auto footer = text("Press q to quit.") | dim;
 
-        return vbox({text(""),
-                    metrics_row,
+        return vbox({separator(),
+                    columns,
                     separator(),
                     footer});
     });

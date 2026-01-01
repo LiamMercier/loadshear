@@ -29,7 +29,7 @@ inline std::string bytes_display_string(int64_t value)
     return res;
 }
 
-inline std::string decimal_suffix_string(uint64_t value)
+inline std::string decimal_suffix_string(int64_t value)
 {
     std::string res;
     res.reserve(4);
