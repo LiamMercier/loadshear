@@ -211,6 +211,13 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
     struct TUIState {
         std::mutex mutex;
         MetricsAggregate metrics;
+
+        enum class Mode {
+            Totals,
+            Deltas
+        };
+
+        Mode mode{Mode::Totals};
     };
 
     auto tui_state = std::make_shared<TUIState>();
@@ -267,14 +274,32 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             connections_box
         });
 
-        auto hist = generate_histogram(totals.connection_latency_buckets,
-                                       "Connection Latency");
+        Element hist;
+        Element send_hist;
+        Element read_hist;
 
-        auto send_hist = generate_histogram(totals.send_latency_buckets,
-                                            "Send Latency");
+        if (tui_state->mode == TUIState::Mode::Totals)
+        {
+            hist = generate_histogram(totals.connection_latency_buckets,
+                                      "Connection Latency (totals)");
 
-        auto read_hist = generate_histogram(totals.read_latency_buckets,
-                                            "Read Latency");
+            send_hist = generate_histogram(totals.send_latency_buckets,
+                                           "Send Latency (totals)");
+
+            read_hist = generate_histogram(totals.read_latency_buckets,
+                                           "Read Latency (totals)");
+        }
+        else
+        {
+            hist = generate_histogram(deltas.connection_latency_buckets,
+                                      "Connection Latency (latest)");
+
+            send_hist = generate_histogram(deltas.send_latency_buckets,
+                                           "Send Latency (latest)");
+
+            read_hist = generate_histogram(deltas.read_latency_buckets,
+                                           "Read Latency (latest)");
+        }
 
         auto columns = gridbox({
             {metrics_box | xflex | yflex, separator(), hist | xflex | yflex},
@@ -282,7 +307,7 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             {send_hist | xflex | yflex, separator(), read_hist | xflex | yflex}
         });
 
-        auto footer = text("Press q to quit.") | dim;
+        auto footer = text("Press q to quit, Left / Right arrows to cycle histograms.") | dim;
 
         return vbox({separator(),
                     columns,
@@ -316,10 +341,9 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
                                                                plan.config,
                                                                std::move(metric_sink_tui));
 
-        // TODO: right arrow turns plots from diff to totals, left turns back?
-        // Set quitting to q like with gdb.
+        // Set quitting to q like with gdb, handle state changes.
         auto main_component = CatchEvent(tui_renderer,
-                [orchestrator, &screen](Event event){
+                [orchestrator, &screen, tui_state](Event event){
                     if (event == Event::Character('q')
                         || event == Event::Character('Q')
                         || event == Event::Escape)
@@ -328,6 +352,32 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
                         screen.ExitLoopClosure()();
 
+                        return true;
+                    }
+                    else if (event == Event::ArrowRight)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(tui_state->mutex);
+                            if (tui_state->mode == TUIState::Mode::Totals)
+                            {
+                                tui_state->mode = TUIState::Mode::Deltas;
+                            }
+                        }
+
+                        screen.PostEvent(Event::Custom);
+                        return true;
+                    }
+                    else if (event == Event::ArrowLeft)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(tui_state->mutex);
+                            if (tui_state->mode == TUIState::Mode::Deltas)
+                            {
+                                tui_state->mode = TUIState::Mode::Totals;
+                            }
+                        }
+
+                        screen.PostEvent(Event::Custom);
                         return true;
                     }
 
@@ -355,7 +405,6 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             screen.ExitLoopClosure()();
         });
 
-        // TODO: figure out what happens if we log during this.
         // As soon as we spin up the orchestrator thread, start UI loop in main thread.
         screen.Loop(main_component);
 
