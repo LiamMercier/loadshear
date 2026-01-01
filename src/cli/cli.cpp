@@ -201,6 +201,9 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             return;
         };
 
+    // Create shared pointer to the orchestrator now.
+    std::shared_ptr<Orchestrator<Session>> orchestrator;
+
     // TUI related logic using FTXUI.
     using namespace ftxui;
 
@@ -287,23 +290,6 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
                     footer});
     });
 
-    // TODO: right arrow turns plots from diff to totals, left turns back?
-    // Set quitting to q like with gdb.
-    auto main_component = CatchEvent(tui_renderer,
-            [&](Event event){
-                if (event == Event::Character('q')
-                    || event == Event::Character('Q')
-                    || event == Event::Escape)
-                {
-                    screen.ExitLoopClosure()();
-
-                    // TODO <feature>: setup orchestrator closure like with CTRL-C.
-                    return true;
-                }
-
-                return false;
-            });
-
     auto metric_sink_tui = [metric_sink = std::move(metric_sink),
                             &screen,
                             tui_state](MetricsAggregate data) {
@@ -324,20 +310,38 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 
     try
     {
-        Orchestrator<Session> orchestrator(plan.actions,
-                                           plan.payloads,
-                                           plan.counter_steps,
-                                           plan.config,
-                                           std::move(metric_sink_tui));
+        orchestrator = std::make_shared<Orchestrator<Session>>(plan.actions,
+                                                               plan.payloads,
+                                                               plan.counter_steps,
+                                                               plan.config,
+                                                               std::move(metric_sink_tui));
+
+        // TODO: right arrow turns plots from diff to totals, left turns back?
+        // Set quitting to q like with gdb.
+        auto main_component = CatchEvent(tui_renderer,
+                [orchestrator, &screen](Event event){
+                    if (event == Event::Character('q')
+                        || event == Event::Character('Q')
+                        || event == Event::Escape)
+                    {
+                        orchestrator->early_stop();
+
+                        screen.ExitLoopClosure()();
+
+                        return true;
+                    }
+
+                    return false;
+                });
 
         Logger::info("\nStarting orchestrator loop");
 
-        orchestrator_thread = std::thread([&orchestrator,
+        orchestrator_thread = std::thread([orchestrator,
                                            tui_state,
                                            &screen](){
             try
             {
-                orchestrator.start();
+                orchestrator->start();
             }
             catch (const std::exception & error)
             {

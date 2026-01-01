@@ -105,6 +105,13 @@ public:
         }
     }
 
+    void early_stop()
+    {
+        asio::post(cntx_, [this](){
+            do_shutdown();
+        });
+    }
+
 private:
 
     // Dispatch actions and then schedule next action timer.
