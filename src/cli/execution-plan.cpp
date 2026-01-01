@@ -44,7 +44,8 @@ generate_execution_plan(const DSLData & script,
         SessionConfig session_config(settings.header_size,
                                      settings.body_max,
                                      settings.read,
-                                     settings.repeat);
+                                     settings.repeat,
+                                     settings.packet_sample_rate);
 
         // Create the message handler factory.
         typename Shard<Session>::MessageHandlerFactory factory;

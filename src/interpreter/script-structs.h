@@ -138,6 +138,7 @@ struct SettingsBlock
     uint32_t body_max;
     bool read{false};
     bool repeat{false};
+    uint32_t packet_sample_rate{0};
 
     uint32_t shards;
     uint16_t port{0};

@@ -15,6 +15,10 @@ struct alignas(CACHE_ALIGNMENT) ShardMetrics
 public:
     void record_connection_latency(uint64_t latency_us);
 
+    void record_send_latency(uint64_t latency_us);
+
+    void record_read_latency(uint64_t latency_us);
+
     inline void record_bytes_sent(uint64_t count);
 
     inline void record_bytes_read(uint64_t count);
@@ -47,6 +51,8 @@ private:
     // 14 : ~1s
     // 15 : ~2s
     std::array<uint64_t, 16> connection_latency_buckets{};
+    std::array<uint64_t, 16> send_latency_buckets{};
+    std::array<uint64_t, 16> read_latency_buckets{};
 };
 
 inline void ShardMetrics::record_bytes_sent(uint64_t count)

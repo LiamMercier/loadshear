@@ -13,6 +13,7 @@ const std::unordered_set<std::string> VALID_KEYWORDS {
     "BODYMAX",
     "READ",
     "REPEAT",
+    "SAMPLERATE",
     "ENDPOINTS",
     "SHARDS",
     "PACKETS",

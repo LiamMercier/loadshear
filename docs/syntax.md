@@ -61,6 +61,7 @@ The SETTINGS block sets options for execution plan generation.
 | [BODYMAX](#BODYMAX)       | integer        | Depends   | None     |
 | [READ](#READ)             | boolean        | Optional  | "false"  |
 | [REPEAT](#REPEAT)         | boolean        | Optional  | "false"  |
+| [SAMPLERATE](#SAMPLERATE) | integer        | Optional  | 100
 | [ENDPOINTS](#ENDPOINTS)   | list\<string\> | Required  | None     |
 | [SHARDS](#SHARDS)         | integer        | Optional  | Depends  |
 | [PACKETS](#PACKETS)       | list\<string\> | Depends   | None     |
@@ -222,6 +223,28 @@ REPEAT must be "true" or "false"
     ...
 }
 ```
+
+[back](#fields)
+
+## SAMPLERATE
+
+Decide how often sessions should sample the latency of packets sent and read. Each session will sample the first packet and every SAMPLERATE packet after.
+
+Decreasing this value too much can impact performance.
+
+### Usage
+
+```
+{
+    ...
+    SAMPLERATE = 20
+    ...
+}
+```
+
+### Values
+
+SAMPLERATE must be a positive integer. If set to zero, it will default to 100.
 
 [back](#fields)
 

@@ -201,7 +201,7 @@ DSLData get_simple_valid_script_data()
 ExecutionPlan<TCPSession>
 get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 {
-    SessionConfig session_config(8, 12288, true, false);
+    SessionConfig session_config(8, 12288, true, false, 100);
     HostInfo<TCPSession> h_info;
 
     using tcp = asio::ip::tcp;

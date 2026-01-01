@@ -166,7 +166,7 @@ TEST(ShardMetrics, RecordBytesTransmitted)
 
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     wasmtime::Config WASM_config;
     auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));

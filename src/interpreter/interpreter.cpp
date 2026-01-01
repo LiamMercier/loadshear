@@ -159,6 +159,12 @@ void Interpreter::set_script_defaults()
     {
         settings.handler_value = "NOP";
     }
+
+    // If the sample rate is 0, set to default.
+    if (settings.packet_sample_rate == 0)
+    {
+        settings.packet_sample_rate = DEFAULT_PACKET_SAMPLE_RATE;
+    }
     
     // We already default the orchestrator actions during parse since we
     // validate the data is possibly correct (but not validated yet).

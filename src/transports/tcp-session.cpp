@@ -16,6 +16,8 @@ incoming_header_(config_.header_size),
 message_handler_(message_handler),
 payload_manager_(payload_manager),
 metrics_sink_(shard_metrics),
+write_sample_counter_(config_.packet_sample_rate),
+read_sample_counter_(config_.packet_sample_rate),
 on_disconnect_(on_disconnect)
 {
     current_payload_.temps.reserve(MESSAGE_BUFFER_SIZE);
@@ -145,6 +147,12 @@ void TCPSession::on_connect()
 // do_read_header runs inside of a strand
 void TCPSession::do_read_header()
 {
+    // Every packet_sample_rate packets, record write latency.
+    if (++read_sample_counter_ >= config_.packet_sample_rate)
+    {
+        read_start_time_ = std::chrono::steady_clock::now();
+    }
+
     asio::async_read(socket_,
         asio::buffer(incoming_header_, config_.header_size),
         asio::bind_executor(strand_,
@@ -213,6 +221,22 @@ void TCPSession::do_read_body()
                 }
 
                 self->metrics_sink_.record_bytes_read(count);
+
+                // If we sampled, compute the latency.
+                if (self->read_sample_counter_ > self->config_.packet_sample_rate)
+                {
+                    auto end = std::chrono::steady_clock::now();
+
+                    uint64_t latency_us = static_cast<uint64_t>(
+                            std::chrono::duration_cast
+                                <std::chrono::microseconds>
+                                    (
+                                        end - self->read_start_time_
+                                    ).count()
+                                );
+
+                    self->metrics_sink_.record_read_latency(latency_us);
+                }
 
                 self->handle_message();
             }));
@@ -284,6 +308,12 @@ void TCPSession::do_write()
 
         writing_ = true;
 
+        // Every packet_sample_rate packets, record write latency.
+        if (++write_sample_counter_ >= config_.packet_sample_rate)
+        {
+            write_start_time_ = std::chrono::steady_clock::now();
+        }
+
         asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
             asio::bind_executor(strand_,
                 [self = shared_from_this(), packet](boost::system::error_code ec,
@@ -295,6 +325,22 @@ void TCPSession::do_write()
                     }
 
                     self->metrics_sink_.record_bytes_sent(count);
+
+                    // If we sampled, compute the latency.
+                    if (self->write_sample_counter_ > self->config_.packet_sample_rate)
+                    {
+                        auto end = std::chrono::steady_clock::now();
+
+                        uint64_t latency_us = static_cast<uint64_t>(
+                                std::chrono::duration_cast
+                                    <std::chrono::microseconds>
+                                        (
+                                            end - self->write_start_time_
+                                        ).count()
+                                    );
+
+                        self->metrics_sink_.record_send_latency(latency_us);
+                    }
 
                     // Call this function again to post another async_write call.
                     self->do_write();

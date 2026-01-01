@@ -154,6 +154,10 @@ private:
 
     // Write metrics, keep track of connection times.
     ShardMetrics & metrics_sink_;
+    uint32_t write_sample_counter_{0};
+    uint32_t read_sample_counter_{0};
+    std::chrono::steady_clock::time_point write_start_time_;
+    std::chrono::steady_clock::time_point read_start_time_;
 
     //
     const DisconnectCallback on_disconnect_;

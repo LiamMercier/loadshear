@@ -74,7 +74,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
             };
 
     // Configure the orchestrator, set to use 2 shards.
-    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false},
+    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false, 100},
                                                        host_info,
                                                        handler_factory,
                                                        2);
@@ -256,7 +256,7 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
             };
 
     // Configure the orchestrator, set to use 2 shards.
-    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false},
+    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false, 100},
                                                        host_info,
                                                        handler_factory,
                                                        4);

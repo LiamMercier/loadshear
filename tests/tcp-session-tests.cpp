@@ -37,7 +37,7 @@ TEST(TCPSessionTests, SingleSessionParsing)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
@@ -230,7 +230,7 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(Header::HEADER_SIZE, 12288, true, false);
+    SessionConfig config(Header::HEADER_SIZE, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
@@ -383,7 +383,7 @@ TEST(TCPSessionTests, SingleSessionWriteOne)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
@@ -557,7 +557,7 @@ TEST(TCPSessionTests, SingleSessionCounterFlood)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
@@ -738,7 +738,7 @@ TEST(TCPSessionTests, SingleSessionTimestampFlood)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
@@ -925,7 +925,7 @@ TEST(TCPSessionTests, MultiSessionCounterFlood)
     // Setup a TCPSession by itself.
     asio::io_context session_cntx;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
 
     // Create mock header parsing function and WASM instance.
     wasmtime::Config WASM_config;
