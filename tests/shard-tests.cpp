@@ -29,7 +29,7 @@ TEST(TCPShardTests, SingleShardTest)
 
     // Mock orchestrator, make one shard for testing.
     int BASE_NUM_PAYLOADS = 8;
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
     HostInfo<TCPSession> host_info;
     host_info.endpoints = {server_ep};
 
@@ -212,7 +212,7 @@ TEST(TCPShardTests, MultiShardTest)
     int BASE_NUM_PAYLOADS = 8;
     int NUM_SHARDS = 4;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
     HostInfo<TCPSession> host_info;
     host_info.endpoints = {server_ep};
 
@@ -423,7 +423,7 @@ TEST(TCPShardTests, MultiShardHeavy)
     int BASE_NUM_PAYLOADS = 8;
     int NUM_SHARDS = 4;
 
-    SessionConfig config(4, 12288, true, false);
+    SessionConfig config(4, 12288, true, false, 100);
     HostInfo<TCPSession> host_info;
     host_info.endpoints = {server_ep};
 

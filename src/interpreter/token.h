@@ -13,6 +13,7 @@ const std::unordered_set<std::string> VALID_KEYWORDS {
     "BODYMAX",
     "READ",
     "REPEAT",
+    "SAMPLERATE",
     "ENDPOINTS",
     "SHARDS",
     "PACKETS",
@@ -27,8 +28,7 @@ const std::unordered_set<std::string> VALID_KEYWORDS {
     "OFFSET",
     "COPIES",
     "TIMESTAMP",
-    "COUNTER",
-    "FORMAT"
+    "COUNTER"
 };
 
 enum class TokenType : uint8_t

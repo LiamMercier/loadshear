@@ -15,8 +15,11 @@ target_link_libraries(cli PUBLIC
     transports
     packets
     logger
+    metrics
     Boost::program_options
     wasmtime
+    ftxui::screen
+    ftxui::component
 )
 
 # wasmtime has an unused variable that we have errors on in release.

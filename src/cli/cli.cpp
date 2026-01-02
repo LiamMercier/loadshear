@@ -9,6 +9,13 @@
 
 #include <iostream>
 
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+
+#include "create-histogram.h"
+#include "create-numeric-display.h"
+
 //
 // Helpers
 //
@@ -165,6 +172,7 @@ int CLI::execute_script(const DSLData & script)
             if (cli_ops_.quiet)
             {
                 Logger::set_level(LogLevel::WARN);
+                return start_orchestrator_loop_uninteractive(std::move(plan));
             }
 
             // Now, start the program's main loop
@@ -188,13 +196,253 @@ int CLI::execute_script(const DSLData & script)
 template <typename Session>
 int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 {
+    // Create shared pointer to the orchestrator now.
+    std::shared_ptr<Orchestrator<Session>> orchestrator;
 
+    // TUI related logic using FTXUI.
+    using namespace ftxui;
+
+    // Only used in this function.
+    struct TUIState {
+        std::mutex mutex;
+        MetricsAggregate metrics;
+
+        enum class Mode {
+            Totals,
+            Deltas
+        };
+
+        std::atomic<Mode> mode{Mode::Totals};
+    };
+
+    auto tui_state = std::make_shared<TUIState>();
+    auto screen = ScreenInteractive::Fullscreen();
+
+    auto tui_renderer = Renderer([tui_state](){
+
+        MetricsSnapshot totals;
+        MetricsDelta deltas;
+
+        {
+            std::lock_guard<std::mutex> lock(tui_state->mutex);
+
+            auto & metrics = tui_state->metrics;
+            totals = metrics.current_snapshot_aggregate;
+            deltas = metrics.change_aggregate;
+        }
+
+        using namespace ftxui;
+
+        // Display throughput metrics.
+        auto bytes_header = text("Throughput") | bold | center;
+
+        auto bytes_box = vbox({
+            create_bytes_display("sent: ",
+                                 totals.bytes_sent,
+                                 deltas.bytes_sent),
+            create_bytes_display("read: ",
+                                 totals.bytes_read,
+                                 deltas.bytes_read)
+        });
+
+        // Display connection metrics.
+        auto connections_header = text("Connections") | bold | center;
+
+        auto connections_box = vbox({
+            create_numeric_display("active: ",
+                                   totals.connected_sessions,
+                                   deltas.connected_sessions),
+
+            create_numeric_display("attempted: ",
+                                   totals.connection_attempts,
+                                   deltas.connection_attempts),
+            create_numeric_display("failed: ",
+                                   totals.failed_connections,
+                                   deltas.failed_connections),
+            create_numeric_display("successful: ",
+                                   totals.finished_connections,
+                                   deltas.finished_connections)
+        });
+
+        auto metrics_box = vbox({
+            bytes_header,
+            separator(),
+            bytes_box,
+            separator(),
+            connections_header,
+            separator(),
+            connections_box
+        });
+
+        Element hist;
+        Element send_hist;
+        Element read_hist;
+
+        if (tui_state->mode == TUIState::Mode::Totals)
+        {
+            hist = generate_histogram(totals.connection_latency_buckets,
+                                      "Connection Latency (totals)");
+
+            send_hist = generate_histogram(totals.send_latency_buckets,
+                                           "Send Latency (totals)");
+
+            read_hist = generate_histogram(totals.read_latency_buckets,
+                                           "Read Latency (totals)");
+        }
+        else
+        {
+            hist = generate_histogram(deltas.connection_latency_buckets,
+                                      "Connection Latency (latest)");
+
+            send_hist = generate_histogram(deltas.send_latency_buckets,
+                                           "Send Latency (latest)");
+
+            read_hist = generate_histogram(deltas.read_latency_buckets,
+                                           "Read Latency (latest)");
+        }
+
+        auto columns = gridbox({
+            {metrics_box | xflex | yflex, separator(), hist | xflex | yflex},
+            {separator(), separator(), separator()},
+            {send_hist | xflex | yflex, separator(), read_hist | xflex | yflex}
+        });
+
+        auto footer = text("Press q to quit, Left / Right arrows to cycle histograms.") | dim;
+
+        return vbox({separator(),
+                    columns,
+                    separator(),
+                    footer});
+    });
+
+    auto metric_sink_tui = [&screen,
+                            tui_state](MetricsAggregate data) {
+        // Update data and wake up the screen thread.
+        {
+            std::lock_guard<std::mutex> lock(tui_state->mutex);
+            tui_state->metrics = std::move(data);
+        }
+
+        screen.PostEvent(ftxui::Event::Custom);
+    };
+
+    // Orchestrator spinup logic.
+    std::thread orchestrator_thread;
+
+    try
+    {
+        orchestrator = std::make_shared<Orchestrator<Session>>(plan.actions,
+                                                               plan.payloads,
+                                                               plan.counter_steps,
+                                                               plan.config,
+                                                               std::move(metric_sink_tui));
+
+        // Set quitting to q like with gdb, handle state changes.
+        auto main_component = CatchEvent(tui_renderer,
+                [orchestrator, &screen, tui_state](Event event){
+                    if (event == Event::Character('q')
+                        || event == Event::Character('Q')
+                        || event == Event::Escape)
+                    {
+                        orchestrator->early_stop();
+
+                        screen.ExitLoopClosure()();
+
+                        return true;
+                    }
+                    else if (event == Event::ArrowRight)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(tui_state->mutex);
+                            if (tui_state->mode == TUIState::Mode::Totals)
+                            {
+                                tui_state->mode = TUIState::Mode::Deltas;
+                            }
+                        }
+
+                        screen.PostEvent(Event::Custom);
+                        return true;
+                    }
+                    else if (event == Event::ArrowLeft)
+                    {
+                        {
+                            std::lock_guard<std::mutex> lock(tui_state->mutex);
+                            if (tui_state->mode == TUIState::Mode::Deltas)
+                            {
+                                tui_state->mode = TUIState::Mode::Totals;
+                            }
+                        }
+
+                        screen.PostEvent(Event::Custom);
+                        return true;
+                    }
+
+                    return false;
+                });
+
+        Logger::info("\nStarting orchestrator loop");
+
+        orchestrator_thread = std::thread([orchestrator,
+                                           tui_state,
+                                           &screen](){
+            try
+            {
+                orchestrator->start();
+            }
+            catch (const std::exception & error)
+            {
+                std::string e_msg = "Caught exception in orchestrator loop: "
+                                    + std::string(error.what());
+                Logger::error(std::move(e_msg));
+            }
+
+            // After orchestrator finishes, try to close the screen thread.
+            screen.PostEvent(ftxui::Event::Custom);
+            screen.ExitLoopClosure()();
+        });
+
+        Logger::pause();
+
+        // As soon as we spin up the orchestrator thread, start UI loop in main thread.
+        screen.Loop(main_component);
+
+        Logger::resume();
+
+        if (orchestrator_thread.joinable())
+        {
+            orchestrator_thread.join();
+        }
+
+        // We will exit when the orchestrator is done.
+    }
+    catch (const std::exception & error)
+    {
+        std::string e_msg = "Caught exception in orchestrator construction: "
+                            + std::string(error.what());
+        Logger::error(std::move(e_msg));
+
+        return 1;
+    }
+
+    return 0;
+}
+
+template <typename Session>
+int CLI::start_orchestrator_loop_uninteractive(ExecutionPlan<Session> plan)
+{
+    // Do nothing, we are not running a TUI.
+    auto metric_sink = [this](MetricsAggregate data){
+            return;
+        };
+
+    // Orchestrator spinup logic.
     try
     {
         Orchestrator<Session> orchestrator(plan.actions,
                                            plan.payloads,
                                            plan.counter_steps,
-                                           plan.config);
+                                           plan.config,
+                                           std::move(metric_sink));
 
         Logger::info("\nStarting orchestrator loop");
 
@@ -220,7 +468,6 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
 
     Logger::info("            \033[1mStarting dry run\033[0m");
 
-    uint32_t current_offset = 0;
     size_t current_payload_id = 0;
 
     for (size_t i = 0; i < plan.actions.size(); i++)
@@ -228,9 +475,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
         const auto & action = plan.actions[i];
         const auto & dsl_action = actions_dsl[i];
 
-        current_offset += action.offset.count();
-
-        std::string action_msg = ms_to_timestring(current_offset)
+        std::string action_msg = ms_to_timestring(action.offset.count())
                                  + action.type_to_string()
                                  + " ";
 

@@ -312,6 +312,16 @@ ParseResult Parser::parse_settings(SettingsBlock & settings)
                     return bad_bool_error(value_token);
                 }
             }
+            else if (keyword.text == "SAMPLERATE")
+            {
+                ParseResult int_res = try_convert_int(value_token,
+                                                      settings.packet_sample_rate,
+                                                      "SAMPLERATE");
+                if (!int_res.success)
+                {
+                    return int_res;
+                }
+            }
             else if (keyword.text == "SHARDS")
             {
                 ParseResult int_res = try_convert_int(value_token,

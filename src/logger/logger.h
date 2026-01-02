@@ -84,6 +84,25 @@ public:
         instance().push_message(LogLevel::ERROR, std::move(msg));
     }
 
+    // Control printing during TUI.
+    static void pause()
+    {
+        {
+            std::lock_guard lock(instance().queue_mutex_);
+            instance().notify_ = false;
+        }
+    }
+
+    static void resume()
+    {
+        {
+            std::lock_guard lock(instance().queue_mutex_);
+            instance().notify_ = true;
+        }
+
+        instance().cv_.notify_one();
+    }
+
 private:
     Logger() = default;
 
@@ -99,6 +118,7 @@ private:
 private:
     LogLevel level_{LogLevel::INFO};
     std::atomic<bool> running_{false};
+    bool notify_{true};
 
     // We don't expect much queue contention since it is infrequent that
     // we will log from multiple shards at once.

@@ -7,7 +7,12 @@
 
 #include <boost/asio.hpp>
 
-static constexpr auto COUNTER_ALIGNMENT = std::hardware_destructive_interference_size;
+// Handle case where we don't have the cache line size and set it to 64.
+#ifdef __cpp_lib_hardware_interference_size
+static constexpr size_t COUNTER_ALIGNMENT = std::hardware_destructive_interference_size;
+#else
+static constexpr size_t COUNTER_ALIGNMENT = 64;
+#endif
 
 // Align with hardware_destructive_interference_size to prevent cache line invalidation
 // across our different shard threads calling the counter.

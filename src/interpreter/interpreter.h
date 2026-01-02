@@ -11,6 +11,9 @@
 class Interpreter
 {
 public:
+    static constexpr uint64_t DEFAULT_PACKET_SAMPLE_RATE = 100;
+
+public:
     ParseResult parse_script(std::string script_name);
 
 private:

@@ -24,6 +24,10 @@ template std::expected<ExecutionPlan<TCPSession>, std::string>
 generate_execution_plan<TCPSession>(const DSLData &,
                                     std::pmr::memory_resource* memory);
 
+// TODO <optimization>: If we see FLOOD called, we can stop adding SEND actions
+//                      and just read the packets and adding descriptors, since
+//                      the SEND action just tells session's they may send, and
+//                      FLOOD already does this.
 template<typename Session>
 std::expected<ExecutionPlan<Session>, std::string>
 generate_execution_plan(const DSLData & script,
@@ -40,7 +44,8 @@ generate_execution_plan(const DSLData & script,
         SessionConfig session_config(settings.header_size,
                                      settings.body_max,
                                      settings.read,
-                                     settings.repeat);
+                                     settings.repeat,
+                                     settings.packet_sample_rate);
 
         // Create the message handler factory.
         typename Shard<Session>::MessageHandlerFactory factory;
@@ -280,12 +285,17 @@ generate_execution_plan(const DSLData & script,
             identity_map[identifier] = this_index;
         }
 
+        // Store the current offset.
+        uint64_t curr_offset = 0;
+
         // Go through the action data and prepare the payloads.
         //
         // Packet data MUST NOT be changed after this.
         for (const auto & action : script.orchestrator.actions)
         {
             ActionDescriptor desc;
+
+            curr_offset += action.offset_ms;
 
             // For each of these besides SEND we simply create an action
             // for the orchestrator. For SEND, we also need to add a payload.
@@ -295,14 +305,14 @@ generate_execution_plan(const DSLData & script,
                 {
                     desc.make_create(0,
                                      action.range.second,
-                                     action.offset_ms);
+                                     curr_offset);
                     break;
                 }
                 case ActionType::CONNECT:
                 {
                     desc.make_connect(action.range.start,
                                       action.range.second,
-                                      action.offset_ms);
+                                      curr_offset);
                     break;
                 }
                 case ActionType::SEND:
@@ -310,7 +320,7 @@ generate_execution_plan(const DSLData & script,
                     desc.make_send(action.range.start,
                                    action.range.second,
                                    action.count,
-                                   action.offset_ms);
+                                   curr_offset);
 
                     // For SEND, we must setup a payload.
                     PayloadDescriptor payload;
@@ -493,7 +503,7 @@ generate_execution_plan(const DSLData & script,
                 {
                     desc.make_flood(action.range.start,
                                     action.range.second,
-                                    action.offset_ms);
+                                    curr_offset);
                     break;
                 }
                 case ActionType::DRAIN:
@@ -501,14 +511,14 @@ generate_execution_plan(const DSLData & script,
                     desc.make_drain(action.range.start,
                                     action.range.second,
                                     action.count,
-                                    action.offset_ms);
+                                    curr_offset);
                     break;
                 }
                 case ActionType::DISCONNECT:
                 {
                     desc.make_disconnect(action.range.start,
                                          action.range.second,
-                                         action.offset_ms);
+                                         curr_offset);
 
                     break;
                 }

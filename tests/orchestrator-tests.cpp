@@ -74,7 +74,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
             };
 
     // Configure the orchestrator, set to use 2 shards.
-    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false},
+    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false, 100},
                                                        host_info,
                                                        handler_factory,
                                                        2);
@@ -151,11 +151,15 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
     });
 
     // Create the orchestrator.
+    auto metric_sink = [](MetricsAggregate data){
+            return;
+        };
 
     Orchestrator<TCPSession> orchestrator(actions,
                                           payloads,
                                           steps,
-                                          orchestrator_config);
+                                          orchestrator_config,
+                                          metric_sink);
 
     // Start the orchestrator.
     orchestrator.start();
@@ -252,7 +256,7 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
             };
 
     // Configure the orchestrator, set to use 2 shards.
-    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false},
+    OrchestratorConfig<TCPSession> orchestrator_config({4, 12288, true, false, 100},
                                                        host_info,
                                                        handler_factory,
                                                        4);
@@ -329,11 +333,15 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
     });
 
     // Create the orchestrator.
+    auto metric_sink = [](MetricsAggregate data){
+            return;
+        };
 
     Orchestrator<TCPSession> orchestrator(actions,
                                           payloads,
                                           steps,
-                                          orchestrator_config);
+                                          orchestrator_config,
+                                          metric_sink);
 
     // Start the orchestrator.
     orchestrator.start();

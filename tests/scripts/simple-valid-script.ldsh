@@ -27,6 +27,9 @@ SETTINGS my_settings {
     // Disable repeating, session's will not repeat the payloads after they finish.
     REPEAT = "false"
 
+    // Set sample rate to every 50 packets to reduce clock reads.
+    SAMPLERATE = 50
+
     // Use these endpoints when starting the sessions.
     //
     // We expect a list of values separated by commas.

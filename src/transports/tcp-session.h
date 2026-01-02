@@ -9,6 +9,7 @@
 #include "message-handler-interface.h"
 #include "payload-manager.h"
 #include "response-packet.h"
+#include "shard-metrics.h"
 
 namespace asio = boost::asio;
 
@@ -54,6 +55,7 @@ public:
                const SessionConfig & config,
                const MessageHandler & message_handler,
                const PayloadManager & payload_manager,
+               ShardMetrics & shard_metrics,
                DisconnectCallback & on_disconnect);
 
     // This class should not be moved or copied.
@@ -141,7 +143,7 @@ private:
     size_t writes_queued_{0};
 
     //
-    // Handlers
+    // Handlers & metrics
     //
 
     // Reference to the thread's message handler interface.
@@ -149,6 +151,13 @@ private:
 
     // Reference to the Controller's payload manager.
     const PayloadManager & payload_manager_;
+
+    // Write metrics, keep track of connection times.
+    ShardMetrics & metrics_sink_;
+    uint32_t write_sample_counter_{0};
+    uint32_t read_sample_counter_{0};
+    std::chrono::steady_clock::time_point write_start_time_;
+    std::chrono::steady_clock::time_point read_start_time_;
 
     //
     const DisconnectCallback on_disconnect_;
