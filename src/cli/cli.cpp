@@ -401,10 +401,12 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             screen.ExitLoopClosure()();
         });
 
-        // TODO <feature>: pause logger, tell it to hold new messages.
+        Logger::pause();
 
         // As soon as we spin up the orchestrator thread, start UI loop in main thread.
         screen.Loop(main_component);
+
+        Logger::resume();
 
         if (orchestrator_thread.joinable())
         {

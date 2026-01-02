@@ -45,13 +45,18 @@ Logger & Logger::instance()
 // Already in the instance, no need to grab again.
 void Logger::push_message(LogLevel level, std::string msg)
 {
+    bool should_notify = false;
     {
         std::lock_guard lock(queue_mutex_);
         msg_queue_.emplace_back(LogEntry{level, std::move(msg)});
+        should_notify = notify_;
     }
 
-    // Do work if waiting (wakes up thread).
-    cv_.notify_one();
+    if (should_notify)
+    {
+        // Do work if waiting (wakes up thread).
+        cv_.notify_one();
+    }
 }
 
 void Logger::worker_loop()
@@ -68,7 +73,7 @@ void Logger::worker_loop()
             std::unique_lock lock(queue_mutex_);
 
             cv_.wait(lock, [this] {
-                return !msg_queue_.empty() || !running_;
+                return (notify_ && !msg_queue_.empty()) || !running_;
             });
 
             // When we wake up, swap the queues so we own all of the
