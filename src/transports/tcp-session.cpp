@@ -1,8 +1,5 @@
 #include "tcp-session.h"
 
-// TODO: remove
-#include <iostream>
-
 TCPSession::TCPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,

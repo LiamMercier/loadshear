@@ -18,7 +18,6 @@
 
 namespace asio = boost::asio;
 
-// TODO: make this class lifetime safe
 template<typename Session>
 class SessionPool
 {
