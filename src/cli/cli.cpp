@@ -196,11 +196,6 @@ int CLI::execute_script(const DSLData & script)
 template <typename Session>
 int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 {
-    auto metric_sink = [this](MetricsAggregate data){
-            this->metric_sink(std::move(data));
-            return;
-        };
-
     // Create shared pointer to the orchestrator now.
     std::shared_ptr<Orchestrator<Session>> orchestrator;
 
@@ -217,19 +212,24 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             Deltas
         };
 
-        Mode mode{Mode::Totals};
+        std::atomic<Mode> mode{Mode::Totals};
     };
 
     auto tui_state = std::make_shared<TUIState>();
     auto screen = ScreenInteractive::Fullscreen();
 
     auto tui_renderer = Renderer([tui_state](){
-        // TODO: should we maybe copy data and drop the lock instead?
-        std::lock_guard<std::mutex> lock(tui_state->mutex);
 
-        auto & metrics = tui_state->metrics;
-        auto & totals = metrics.current_snapshot_aggregate;
-        auto & deltas = metrics.change_aggregate;
+        MetricsSnapshot totals;
+        MetricsDelta deltas;
+
+        {
+            std::lock_guard<std::mutex> lock(tui_state->mutex);
+
+            auto & metrics = tui_state->metrics;
+            totals = metrics.current_snapshot_aggregate;
+            deltas = metrics.change_aggregate;
+        }
 
         using namespace ftxui;
 
@@ -315,12 +315,8 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
                     footer});
     });
 
-    auto metric_sink_tui = [metric_sink = std::move(metric_sink),
-                            &screen,
+    auto metric_sink_tui = [&screen,
                             tui_state](MetricsAggregate data) {
-        // Write any data to disk if we are meant to do so.
-        metric_sink(data);
-
         // Update data and wake up the screen thread.
         {
             std::lock_guard<std::mutex> lock(tui_state->mutex);
@@ -405,6 +401,8 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
             screen.ExitLoopClosure()();
         });
 
+        // TODO <feature>: pause logger, tell it to hold new messages.
+
         // As soon as we spin up the orchestrator thread, start UI loop in main thread.
         screen.Loop(main_component);
 
@@ -430,8 +428,8 @@ int CLI::start_orchestrator_loop(ExecutionPlan<Session> plan)
 template <typename Session>
 int CLI::start_orchestrator_loop_uninteractive(ExecutionPlan<Session> plan)
 {
+    // Do nothing, we are not running a TUI.
     auto metric_sink = [this](MetricsAggregate data){
-            this->metric_sink(std::move(data));
             return;
         };
 
@@ -468,7 +466,6 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
 
     Logger::info("            \033[1mStarting dry run\033[0m");
 
-    uint32_t current_offset = 0;
     size_t current_payload_id = 0;
 
     for (size_t i = 0; i < plan.actions.size(); i++)
@@ -476,9 +473,7 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
         const auto & action = plan.actions[i];
         const auto & dsl_action = actions_dsl[i];
 
-        current_offset += action.offset.count();
-
-        std::string action_msg = ms_to_timestring(current_offset)
+        std::string action_msg = ms_to_timestring(action.offset.count())
                                  + action.type_to_string()
                                  + " ";
 
@@ -609,9 +604,4 @@ bool CLI::request_acknowledgement(std::string endpoints_list)
 
     Logger::info("\nAborting");
     return false;
-}
-
-void CLI::metric_sink(MetricsAggregate data)
-{
-    // TODO: write to files if necessary.
 }

@@ -258,6 +258,8 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
                             std::pmr::vector<std::pmr::vector<uint8_t>>(memory)
                         );
 
+    uint64_t offset = 0;
+
     // CREATE 100 OFFSET 0ms
     {
         ActionDescriptor create;
@@ -267,15 +269,17 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
     // CONNECT 0:50 OFFSET 100ms
     {
+        offset += 100;
         ActionDescriptor connect_action;
-        connect_action.make_connect(0, 50, 100);
+        connect_action.make_connect(0, 50, offset);
         plan.actions.push_back(std::move(connect_action));
     }
 
     // CONNECT 50:100
     {
+        offset += Parser::DEFAULT_OFFSET_MS;
         ActionDescriptor connect_action;
-        connect_action.make_connect(50, 100, Parser::DEFAULT_OFFSET_MS);
+        connect_action.make_connect(50, 100, offset);
         plan.actions.push_back(std::move(connect_action));
     }
 
@@ -284,11 +288,12 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
     // SEND 0:100 p1 COPIES 5 TIMESTAMP 0:8 "little":"seconds" OFFSET 200ms
     {
+        offset += 200;
         ActionDescriptor send_action;
         send_action.make_send(0,
                               100,
                               5,
-                              200);
+                              offset);
         plan.actions.push_back(std::move(send_action));
 
         PayloadDescriptor payload_desc;
@@ -317,11 +322,12 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
     // SEND 0:100 p1 COPIES 5 COUNTER 0:8 "little":1 OFFSET 200ms
     {
+        offset += 200;
         ActionDescriptor send_action;
         send_action.make_send(0,
                               100,
                               5,
-                              200);
+                              offset);
         plan.actions.push_back(std::move(send_action));
 
         PayloadDescriptor payload_desc;
@@ -350,11 +356,12 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
     // SEND 0:100 p1 COPIES 1
     {
+        offset += Parser::DEFAULT_OFFSET_MS;
         ActionDescriptor send_action;
         send_action.make_send(0,
                               100,
                               1,
-                              Parser::DEFAULT_OFFSET_MS);
+                              offset);
         plan.actions.push_back(std::move(send_action));
 
         PayloadDescriptor payload_desc;
@@ -374,11 +381,12 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
     // SEND 0:100 p2 COPIES 1 COUNTER 0:8 "little":7 TIMESTAMP 12:8
     // "big":"milliseconds" OFFSET 200ms
     {
+        offset += 200;
         ActionDescriptor send_action;
         send_action.make_send(0,
                               100,
                               1,
-                              200);
+                              offset);
         plan.actions.push_back(std::move(send_action));
 
         PayloadDescriptor payload_desc;
@@ -418,22 +426,25 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
     // FLOOD 0:100 OFFSET 100ms
     {
+        offset += 100;
         ActionDescriptor flood;
-        flood.make_flood(0, 100, 100);
+        flood.make_flood(0, 100, offset);
         plan.actions.push_back(std::move(flood));
     }
 
     // DRAIN 0:100 TIMEOUT 10000ms OFFSET 500ms
     {
+        offset += 500;
         ActionDescriptor drain;
-        drain.make_drain(0, 100, 10000, 500);
+        drain.make_drain(0, 100, 10000, offset);
         plan.actions.push_back(std::move(drain));
     }
 
     // DISCONNECT 0:100 OFFSET 15s
     {
+        offset += 15 * 1000;
         ActionDescriptor disc;
-        disc.make_disconnect(0, 100, 15 * 1000);
+        disc.make_disconnect(0, 100, offset);
         plan.actions.push_back(std::move(disc));
     }
 

@@ -135,7 +135,6 @@ ParseResult Lexer::tokenize(std::vector<Token> & tokens)
                 char next_c = peek();
 
                 // We allow identifiers to have alphanumeric characters or underscores.
-                // TODO: document this.
                 if (std::isalnum(static_cast<unsigned char>(next_c))
                     || next_c == '_')
                 {
