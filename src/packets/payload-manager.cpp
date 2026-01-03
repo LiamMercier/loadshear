@@ -1,27 +1,38 @@
 #include "payload-manager.h"
 
+#include "logger.h"
+
 #include <chrono>
 #include <iostream>
 
-// TODO <feature>: make it so we can have multiple counter steps per payload.
 PayloadManager::PayloadManager(std::vector<PayloadDescriptor> payloads,
-                               std::vector<uint16_t> steps)
-:payloads_(payloads),
+                               std::vector<std::vector<uint16_t>> steps)
+:payloads_(std::move(payloads)),
 counters_(payloads_.size())
 {
-    for (size_t i = 0; i < counters_.size(); i++)
+    // Should basically never happen.
+    if (payloads_.size() > steps.size())
     {
-        counters_[i].counter = 0;
+        std::string e_msg = "Warning! Not enough counter lists!";
+        Logger::warn(std::move(e_msg));
+
+        steps.resize(payloads_.size());
+    }
+
+    // Go over each list of counters for each payload.
+    for (size_t p_id = 0; p_id < payloads_.size(); p_id++)
+    {
+        auto & payload_counters_ = counters_[p_id];
+
+        auto & step_list = steps[p_id];
+
+        // Allocate and fill the data now.
+        payload_counters_.resize(step_list.size());
 
         // Prevent OOB access.
-        if (i > steps.size())
+        for (size_t i = 0; i < step_list.size(); i++)
         {
-            counters_[i].step = 1;
-            std::cerr << "Warning! Counter steps was out of bounds!\n";
-        }
-        else
-        {
-            counters_[i].step = steps[i];
+            payload_counters_[i].step = step_list[i];
         }
     }
 }
@@ -59,6 +70,7 @@ bool PayloadManager::fill_payload(size_t index, PreparedPayload & payload) const
 
     // Keep track of where we are.
     size_t current_offset = 0;
+    size_t current_counter_idx = 0;
 
     const auto & view = descriptor.packet_data;
 
@@ -78,8 +90,12 @@ bool PayloadManager::fill_payload(size_t index, PreparedPayload & payload) const
             // Create counter data and insert it.
             case PacketOperationType::COUNTER:
             {
-                uint64_t val = counters_[index].counter.fetch_add(
-                                    counters_[index].step, std::memory_order_relaxed);
+                auto & payload_counter = counters_[index];
+                auto & curr_counter = payload_counter[current_counter_idx];
+                current_counter_idx += 1;
+
+                uint64_t val = curr_counter.counter.fetch_add(
+                                    curr_counter.step, std::memory_order_relaxed);
 
                 size_t write_index = payload.temps.size();
 

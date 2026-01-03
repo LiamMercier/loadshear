@@ -34,7 +34,7 @@ public:
 
     // Payload descriptors for each payload.
     std::vector<PayloadDescriptor> payloads;
-    std::vector<uint16_t> counter_steps;
+    std::vector<std::vector<uint16_t>> counter_steps;
 
     // Settings for the orchestrator ripped from the script.
     OrchestratorConfig<Session> config;

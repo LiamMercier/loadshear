@@ -248,7 +248,7 @@ generate_plan_common(const DSLData & script,
 
                     // Set counter step as none for this payload.
                     //
-                    // We store a counter per payload to allow O(1)
+                    // We store a counter per payload descriptor to allow O(1)
                     // contiguous access during runtime at the
                     // cost of a few bytes.
                     //
@@ -261,18 +261,18 @@ generate_plan_common(const DSLData & script,
                     // See packets/payload-manager.cpp
                     for (size_t i = 0; i < action.count; i++)
                     {
-                        plan.counter_steps.push_back(0);
+                        std::vector<uint16_t> empty_counters;
+
+                        plan.counter_steps.push_back(empty_counters);
                         plan.payloads.push_back(payload);
                     }
                     break;
                 }
                 // Fetch the operations to be applied for this payload.
 
-                // Right now, we only store the last counter's step size.
-                //
-                // TODO <feature>: replace this when we can store
-                //                 multiple counter steps.
-                size_t last_counter_step = 0;
+                // For each COUNTER declared, we store a counter.
+                std::vector<uint16_t> counter_list;
+                counter_list.reserve(action.counter_mods.size());
 
                 for (const auto & mod : action.mod_order)
                 {
@@ -301,12 +301,12 @@ generate_plan_common(const DSLData & script,
                         // Turn this counter into a packet operation.
                         PacketOperation counter;
                         counter.make_counter(c_mod.counter_bytes.second,
-                                                c_mod.little_endian);
+                                             c_mod.little_endian);
 
                         // Push these operations and the counter step.
                         payload.ops.push_back(std::move(counter));
 
-                        last_counter_step = c_mod.counter_step;
+                        counter_list.push_back(c_mod.counter_step);
 
                         // Increment the index.
                         data_index += c_mod.counter_bytes.second;
@@ -353,8 +353,8 @@ generate_plan_common(const DSLData & script,
 
                         PacketOperation timestamp;
                         timestamp.make_timestamp(ts_mod.timestamp_bytes.second,
-                                                    ts_mod.little_endian,
-                                                    ts_format);
+                                                 ts_mod.little_endian,
+                                                 ts_format);
 
                         payload.ops.push_back(std::move(timestamp));
 
@@ -373,10 +373,11 @@ generate_plan_common(const DSLData & script,
                     payload.ops.push_back(std::move(identity));
                 }
 
-                // See prior discussion on why we duplicate here.
+                // See prior discussion on why we duplicate here, each send
+                // copy needs its own descriptor and counters.
                 for (size_t i = 0; i < action.count; i++)
                 {
-                    plan.counter_steps.push_back(last_counter_step);
+                    plan.counter_steps.push_back(counter_list);
                     plan.payloads.push_back(payload);
                 }
 

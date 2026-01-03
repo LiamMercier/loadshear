@@ -22,7 +22,7 @@ static constexpr uint64_t DEFAULT_METRICS_INTERVAL_MS = 500;
 public:
     Orchestrator(std::vector<ActionDescriptor> actions,
                  std::vector<PayloadDescriptor> payloads,
-                 std::vector<uint16_t> counter_steps,
+                 std::vector<std::vector<uint16_t>> counter_steps,
                  OrchestratorConfig<Session> config,
                  MetricsSink metrics_sink)
     :work_guard_((asio::make_work_guard(cntx_))),

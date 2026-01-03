@@ -5,8 +5,13 @@
 class PayloadManager
 {
 public:
+    // We expect a list of payload descriptors, and for each payload descriptor
+    // we expect a index matched list of counter step values.
+    //
+    // So, for payload descriptor 1, we expect a vector of uint16_t with one value
+    // per COUNTER declared in the underlying SEND operation.
     PayloadManager(std::vector<PayloadDescriptor> payloads,
-                   std::vector<uint16_t> steps);
+                   std::vector<std::vector<uint16_t>> steps);
 
     // Compute any runtime changes to packets and return the data to caller.
     //
@@ -20,5 +25,5 @@ private:
                        bool little_endian) const;
 
     std::vector<PayloadDescriptor> payloads_;
-    mutable std::vector<PayloadCounter> counters_;
+    mutable std::vector<std::vector<PayloadCounter>> counters_;
 };
