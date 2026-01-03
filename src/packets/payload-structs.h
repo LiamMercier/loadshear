@@ -18,7 +18,50 @@ static constexpr size_t COUNTER_ALIGNMENT = 64;
 // across our different shard threads calling the counter.
 struct alignas(COUNTER_ALIGNMENT) PayloadCounter
 {
-    std::atomic<uint64_t> counter;
+public:
+    // Methods to make the payload counter viable in vectors.
+    //
+    // We follow the rule of 5 by having moves be copies.
+
+    PayloadCounter() noexcept
+    :counter(0),
+    step(0)
+    {
+    }
+
+    // Copy construct
+    PayloadCounter(const PayloadCounter & rhs) noexcept
+    :counter(rhs.counter.load(std::memory_order_relaxed)),
+    step(rhs.step)
+    {
+    }
+
+    // Copy, likely unused for most of our uses.
+    PayloadCounter & operator=(const PayloadCounter & rhs) noexcept
+    {
+        counter.store(rhs.counter.load(std::memory_order_relaxed),
+                      std::memory_order_relaxed);
+        step = rhs.step;
+        return *this;
+    }
+
+    // Implement moves as copies, since we can't really move the atomic.
+    PayloadCounter(PayloadCounter && rhs) noexcept
+    :counter(rhs.counter.load(std::memory_order_relaxed)),
+    step(rhs.step)
+    {
+    }
+
+    PayloadCounter & operator=(PayloadCounter && rhs) noexcept
+    {
+        counter.store(rhs.counter.load(std::memory_order_relaxed),
+                      std::memory_order_relaxed);
+        step = rhs.step;
+        return *this;
+    }
+
+public:
+    std::atomic<uint64_t> counter{0};
     uint16_t step;
 };
 
