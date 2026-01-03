@@ -212,7 +212,7 @@ TEST(ShardMetrics, RecordBytesTransmitted)
 
     // Add some payloads.
     std::vector<PayloadDescriptor> payloads;
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     std::shared_ptr<WASMMessageHandler> handler_ptr;

@@ -315,7 +315,8 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
         for (int i = 0; i < 5; i++)
         {
-            plan.counter_steps.push_back(0);
+            std::vector<uint16_t> empty;
+            plan.counter_steps.push_back(empty);
             plan.payloads.push_back(payload_desc);
         }
     }
@@ -349,7 +350,7 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
 
         for (int i = 0; i < 5; i++)
         {
-            plan.counter_steps.push_back(1);
+            plan.counter_steps.push_back({1});
             plan.payloads.push_back(payload_desc);
         }
     }
@@ -374,7 +375,8 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
             payload_desc.ops.push_back(std::move(packet_op));
         }
 
-        plan.counter_steps.push_back(0);
+        std::vector<uint16_t> empty;
+        plan.counter_steps.push_back({empty});
         plan.payloads.push_back(std::move(payload_desc));
     }
 
@@ -420,7 +422,7 @@ get_simple_valid_script_plan(std::pmr::memory_resource* memory)
             payload_desc.ops.push_back(std::move(packet_op));
         }
 
-        plan.counter_steps.push_back(7);
+        plan.counter_steps.push_back({7});
         plan.payloads.push_back(std::move(payload_desc));
     }
 

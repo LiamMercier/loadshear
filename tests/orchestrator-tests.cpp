@@ -100,7 +100,7 @@ TEST(TCPOrchestratorTests, LightMultishardWASM)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
 
     // Create the list of actions
     std::vector<ActionDescriptor> actions;
@@ -282,7 +282,7 @@ TEST(TCPOrchestratorTests, HeavyMultishardWASM)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
 
     // Create the list of actions
     std::vector<ActionDescriptor> actions;

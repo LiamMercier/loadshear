@@ -695,16 +695,35 @@ EXPECT_PLAN_EQ(const ExecutionPlan<Session> & expected,
             break;
         }
 
-        if (expected.counter_steps[i] != actual.counter_steps[i])
+        auto & e_counters = expected.counter_steps[i];
+        auto & a_counters = actual.counter_steps[i];
+
+        for (size_t j = 0; j < e_counters.size(); j++)
         {
-            std::string issue = "Counter step "
+            if (j >= a_counters.size())
+            {
+                std::string issue = "Counter list "
+                                    + std::to_string(i)
+                                    + " sizes not equal! "
+                                    "Expected "
+                                    + std::to_string(e_counters.size())
+                                    + " Actual "
+                                    + std::to_string(a_counters.size());
+                issues.push_back(std::move(issue));
+                break;
+            }
+
+            if (e_counters[j] != a_counters[j])
+            {
+                std::string issue = "Counter step "
                                 + std::to_string(i)
                                 + " had value mismatch! Expected "
-                                + std::to_string(expected.counter_steps[i])
+                                + std::to_string(e_counters[j])
                                 + " Actual "
-                                + std::to_string(actual.counter_steps[i]);
-            issues.push_back(issue);
-            break;
+                                + std::to_string(a_counters[j]);
+                issues.push_back(issue);
+                break;
+            }
         }
     }
 
