@@ -17,7 +17,6 @@ write_sample_counter_(config_.packet_sample_rate),
 read_sample_counter_(config_.packet_sample_rate),
 on_disconnect_(on_disconnect)
 {
-    current_payload_.temps.reserve(MESSAGE_BUFFER_SIZE);
 }
 
 // Always the first function called on the Session if any are called.

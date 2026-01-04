@@ -166,6 +166,7 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 
 ## Backlog
 
+- Have SessionPool hold shared memory for transports instead of unique memory buffers
 - Refactor each CMake subtarget to have modern include semantics
 - Show endpoints/misc in dry run
 - Setup LTO in cmake for release builds
