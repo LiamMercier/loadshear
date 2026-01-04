@@ -415,10 +415,6 @@ generate_plan_common(const DSLData & script,
     return plan;
 }
 
-// TODO <optimization>: If we see FLOOD called, we can stop adding SEND actions
-//                      and just read the packets and adding descriptors, since
-//                      the SEND action just tells session's they may send, and
-//                      FLOOD already does this.
 template<typename Session>
 std::expected<ExecutionPlan<Session>, std::string>
 generate_execution_plan(const DSLData & script,
