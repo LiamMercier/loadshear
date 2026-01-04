@@ -54,7 +54,7 @@ TEST(TCPShardTests, SingleShardTest)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
 
     //
@@ -237,7 +237,7 @@ TEST(TCPShardTests, MultiShardTest)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
 
     //
@@ -448,7 +448,7 @@ TEST(TCPShardTests, MultiShardHeavy)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
 
     //

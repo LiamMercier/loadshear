@@ -83,7 +83,7 @@ TEST(TCPSessionTests, SingleSessionParsing)
 
     // Empty payload manager.
     std::vector<PayloadDescriptor> payloads;
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     // WASMMessageHandler handler(engine, module);
@@ -284,7 +284,7 @@ TEST(TCPSessionTests, SingleSessionHeartbeat)
 
     // Empty payload manager.
     std::vector<PayloadDescriptor> payloads;
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     // WASMMessageHandler handler(engine, module);
@@ -436,7 +436,7 @@ TEST(TCPSessionTests, SingleSessionWriteOne)
     payloads.push_back({{packet_1.data(), packet_1.size()},
                        std::vector<PacketOperation>{identity_op} });
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     std::shared_ptr<WASMMessageHandler> handler_ptr;
@@ -617,7 +617,7 @@ TEST(TCPSessionTests, SingleSessionCounterFlood)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     std::shared_ptr<WASMMessageHandler> handler_ptr;
@@ -804,7 +804,7 @@ TEST(TCPSessionTests, SingleSessionTimestampFlood)
                            std::vector<PacketOperation>{identity_op_missing_bytes, timestamp_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     std::shared_ptr<WASMMessageHandler> handler_ptr;
@@ -985,7 +985,7 @@ TEST(TCPSessionTests, MultiSessionCounterFlood)
                            std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
     }
 
-    std::vector<uint16_t> steps(payloads.size(), 1);
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
     PayloadManager payload_manager(payloads, steps);
 
     std::shared_ptr<WASMMessageHandler> handler_ptr;

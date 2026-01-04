@@ -17,8 +17,6 @@
 
 namespace asio = boost::asio;
 
-// TODO: consider all lifetime related issues that must be solved during destruction.
-
 template<typename Session>
 class Shard
 {
