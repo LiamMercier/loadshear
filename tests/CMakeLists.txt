@@ -9,6 +9,7 @@ add_executable(unit-tests
     cli-tests.cpp
     test-fixtures.cpp
     metric-tests.cpp
+    udp-session-tests.cpp
 )
 
 target_include_directories(unit-tests PUBLIC wasmtime)
