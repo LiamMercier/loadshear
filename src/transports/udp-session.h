@@ -1,5 +1,16 @@
 #pragma once
 
+#include <boost/asio.hpp>
+#include <boost/asio/ip/udp.hpp>
+
+#include <deque>
+
+#include "session-config.h"
+#include "message-handler-interface.h"
+#include "payload-manager.h"
+#include "response-packet.h"
+#include "shard-metrics.h"
+
 // TODO: figure out how to ensure send packets are below 64kb since OS will reject
 
 // TODO: datagrams must be read all at once, no headers are necessary.
@@ -22,7 +33,9 @@ class UDPSession : public std::enable_shared_from_this<UDPSession>
 public:
     using udp = asio::ip::udp;
     using Endpoint = udp::endpoint;
-    using Endpoints = std::vector<udp::endpoint>;
+
+    // Endpoint lists are not meaningful in UDP.
+    using Endpoints = Endpoint;
 
     using DisconnectCallback = std::function<void()>;
 
@@ -68,8 +81,6 @@ private:
 
     void close_session();
 
-    void handle_stream_error(boost::system::error_code ec);
-
 public:
 
 private:
@@ -80,7 +91,6 @@ private:
     //
     asio::strand<asio::io_context::executor_type> strand_;
     bool live_{false};
-    bool connecting_{false};
     bool flood_{false};
 
     // For graceful exits.
@@ -95,7 +105,8 @@ private:
     udp::socket socket_;
 
     // We hold the maximum expected packet size in this buffer.
-    std::vector<uint8_t> body_buffer_;
+    std::vector<uint8_t> packet_buffer_;
+    size_t packet_size_{0};
 
     std::deque<ResponsePacket> responses_;
 
