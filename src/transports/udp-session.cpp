@@ -66,7 +66,7 @@ void UDPSession::flood()
 
         // If we are already flooding, don't try to open two flood loops.
         //
-        // See the discussion above do_flood() for why.
+        // See the discussion above do_write() for why.
         if (self->flood_ || self->draining_)
         {
             return;
