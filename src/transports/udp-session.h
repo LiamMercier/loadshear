@@ -113,6 +113,8 @@ private:
     // Increasing index into the payloads that need to be sent by this session
     size_t next_payload_index_{0};
 
+    //
+    // TODO <optimization>: we would prefer to store these in a pool.
     PreparedPayload current_payload_;
 
     // Keep track of how many payload writes are requested if not flooding.
