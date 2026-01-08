@@ -297,11 +297,6 @@ void UDPSession::do_write()
         // If flooding or writes are queued, write payloads.
         if (flood_ || writes_queued_ > 0)
         {
-            if (!flood_)
-            {
-                writes_queued_--;
-            }
-
             // Grab the payload from the payload manger.
             bool valid_payload = payload_manager_.fill_payload(next_payload_index_,
                                                                current_payload_);
@@ -324,6 +319,12 @@ void UDPSession::do_write()
                 }
 
                 return;
+            }
+
+            // Decrement after payload is valid.
+            if (!flood_)
+            {
+                writes_queued_--;
             }
 
             // If we get here, we have a valid payload to write.
