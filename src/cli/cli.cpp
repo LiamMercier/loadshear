@@ -120,10 +120,13 @@ int CLI::execute_script(const DSLData & script)
     // Our execution data depends on the Session type. Start here.
     ProtocolType protocol = ProtocolType::UNDEFINED;
 
-    // TODO <feature>: Add more protocols here when implemented.
     if (script.settings.session_protocol == "TCP")
     {
         protocol = ProtocolType::TCP;
+    }
+    else if (script.settings.session_protocol == "UDP")
+    {
+        protocol = ProtocolType::UDP;
     }
 
     switch (protocol)
@@ -143,6 +146,56 @@ int CLI::execute_script(const DSLData & script)
             }
 
             ExecutionPlan<TCPSession> plan = *plan_tmp;
+
+            // If we have dry_run set, do this and exit.
+            if (cli_ops_.dry_run)
+            {
+                dry_run(plan, script);
+                return 0;
+            }
+
+            bool ack = false;
+
+            // Ensure the user knows what is about to happen.
+            if (!cli_ops_.acknowledged_responsibility)
+            {
+                ack = request_acknowledgement(plan.dump_endpoint_list());
+            }
+            else
+            {
+                ack = true;
+            }
+
+            if (!ack)
+            {
+                return 0;
+            }
+
+            // Disable output besides warnings after showing disclaimer.
+            if (cli_ops_.quiet)
+            {
+                Logger::set_level(LogLevel::WARN);
+                return start_orchestrator_loop_uninteractive(std::move(plan));
+            }
+
+            // Now, start the program's main loop
+            return start_orchestrator_loop(std::move(plan));
+        }
+        // Create UDP specific plan and execute.
+        case ProtocolType::UDP:
+        {
+            auto plan_tmp = generate_execution_plan<UDPSession>(script,
+                                                                &arena_);
+
+            // Handle unexpected value.
+            if (!plan_tmp)
+            {
+                std::string e_msg = plan_tmp.error();
+                Logger::error(std::move(e_msg));
+                return 1;
+            }
+
+            ExecutionPlan<UDPSession> plan = *plan_tmp;
 
             // If we have dry_run set, do this and exit.
             if (cli_ops_.dry_run)
@@ -466,7 +519,12 @@ void CLI::dry_run(const ExecutionPlan<Session> & plan,
 {
     const auto & actions_dsl = data.orchestrator.actions;
 
-    Logger::info("            \033[1mStarting dry run\033[0m");
+    Logger::info("             \033[1mStarting dry run\033[0m\n");
+
+    std::string ep_info = "The following endpoints are set to be used:\n";
+    Logger::info(std::move(ep_info));
+
+    Logger::info(plan.dump_endpoint_list());
 
     size_t current_payload_id = 0;
 

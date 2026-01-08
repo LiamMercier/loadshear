@@ -1,5 +1,7 @@
 #include "udp-session.h"
 
+// TODO <feature>: report UDP errors when the endpoint does not exist, etc.
+
 UDPSession::UDPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,
@@ -34,7 +36,7 @@ void UDPSession::start(const Endpoints & endpoints)
         self->metrics_sink_.record_connection_attempt();
 
         boost::system::error_code ec;
-        self->socket_.open(endpoints.protocol());
+        self->socket_.open(endpoints.protocol(), ec);
 
         // If we failed to open, stop.
         if (ec)
@@ -190,8 +192,7 @@ void UDPSession::do_read()
         }));
 }
 
-
-// TODO: allow the user to split the header and body.
+// TODO <feature>: allow the user to split the header and body.
 // Handles a server packet based on user set rules.
 void UDPSession::handle_message()
 {

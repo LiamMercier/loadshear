@@ -7,7 +7,7 @@ struct HostInfo
 {
     typename Session::Endpoints endpoints;
 
-    // TODO: config, i.e for TLS we have to store state
+    // TODO <feature>: other session config, state if we support TLS later.
     //
     // Consider a shared_ptr since we keep a copy of this object per shard, and a
     // ssl context is thread safe. If the underlying config option is not thread safe,

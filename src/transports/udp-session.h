@@ -11,10 +11,6 @@
 #include "response-packet.h"
 #include "shard-metrics.h"
 
-// TODO: figure out how to ensure send packets are below 64kb since OS will reject
-
-// TODO: datagrams must be read all at once, no headers are necessary.
-
 namespace asio = boost::asio;
 
 // Performance-aware UDP session class to be stored in a SessionPool.
@@ -41,7 +37,10 @@ public:
 
     // Everything read by asio's receive will be less than this
     // anyways due to headers.
-    static constexpr size_t MAX_DATAGRAM_SIZE = 65535;
+    static constexpr size_t MAX_DATAGRAM_SIZE = 65535 - 8;
+
+    // Typical max network fragment size, without ipv4 and udp header.
+    static constexpr size_t SUGGESTED_PAYLOAD_SIZE = 1500 - 20 - 8;
 
 public:
     UDPSession(asio::io_context & cntx,

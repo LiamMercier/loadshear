@@ -12,6 +12,7 @@
 enum class ProtocolType : uint8_t
 {
     TCP,
+    UDP,
     UNDEFINED
 };
 
@@ -25,7 +26,7 @@ struct ExecutionPlan
     {
     }
 
-    std::string dump_endpoint_list();
+    std::string dump_endpoint_list() const;
 
 public:
 
