@@ -12,7 +12,7 @@
 const std::array<std::string, 16> latency_labels = {
     "64 ", "128", "256", "512", "1  ", "2  ",
     "4  ", "8  ", "16 ", "32 ", "64 ", "128",
-    "256", "512", "1  ", "2  "
+    "256", "512", "1  ", ">1 "
 };
 
 const std::array<std::string, 16> unit_labels = {

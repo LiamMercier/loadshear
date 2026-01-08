@@ -40,6 +40,10 @@ Or, try running the script against your loopback address.
 loadshear template.ldsh
 ```
 
+## Usage Guide
+
+Loadshear provides various metrics to help assess the current test performance. Users should read the [usage guide](docs/usage.md) for information on interpreting metrics.
+
 ## Loadshear Scripting Language
 
 Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script for customizing load generation. The `loadshear` application will use any file that follows the DSL, but we suggest naming files with `.ldsh` or `.loadshear` for workspace cleanliness. Examples can be found in the [sdk](sdk) folder.
@@ -167,6 +171,7 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 ## Backlog
 
 - Have SessionPool hold shared memory for transports instead of unique memory buffers
+- Handle Session rejected asio writes to the networking buffer because of backpressure
 - Refactor each CMake subtarget to have modern include semantics
 - Show endpoints/misc in dry run
 - Setup LTO in cmake for release builds

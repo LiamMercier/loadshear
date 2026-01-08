@@ -109,6 +109,7 @@ The type of session used for connections.
 SESSION may be any of the following values
 
 - "TCP"
+- "UDP"
 
 ### Usage
 
@@ -144,11 +145,11 @@ PORT must be a valid integer from 1 through 65535
 
 ## HEADERSIZE
 
-The number of bytes a session must read to construct a header for extracting the body length of the packet.
+The number of bytes a TCP based session must read to construct a header for extracting the body length of the packet. Does nothing for UDP based sections.
 
 ### Values
 
-Optional if READ is "false"
+Optional if READ is "false" or SESSION is "UDP"
 
 HEADERSIZE must be a positive integer
 
@@ -423,6 +424,8 @@ ORCHESTRATOR settings_id {
 ## FLOOD
 
 Set session range to flood with any scheduled payloads. SEND actions after FLOOD simply add to the payloads we prepare at program start, but do not control when we send the payload (FLOOD overrides their actions and says to send as soon as possible).
+
+For UDP based tests, FLOOD can cause packet loss if the server cannot read the packets fast enough or the kernel drops the packet.
 
 ### Usage
 

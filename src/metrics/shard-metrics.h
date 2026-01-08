@@ -6,6 +6,9 @@
 
 #include "metrics-snapshot.h"
 
+// TODO <feature>: we could provide metrics for write-read response times if the
+//                 user knows the server responses are relevant (would use a setting).
+
 // Handle alignment for thread interference.
 //
 // We absolutely do not want any way for ShardMetrics for shard A and B to
