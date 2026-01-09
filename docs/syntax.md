@@ -282,7 +282,7 @@ The number of single threaded shards to distribute work across.
 
 SHARDS is optional and must be a positive value, less than or equal to the number of sessions being created.
 
-By default, SHARDS will be set to the detected number of threads that can be concurrently executed. Typically SHARDS will equal the number of logical cores in your device.
+By default, SHARDS will be set to the detected number of threads that can be concurrently executed. Typically this default will equal the number of logical cores in your device. Increasing the value above this default may decrease throughput.
 
 ### Usage
 

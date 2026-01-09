@@ -16,7 +16,7 @@ Loadshear collects the following metrics:
 
 ### Throughput 
 
-#### Bytes sent
+#### Bytes Sent
 
 This measures the number of bytes copied from the program into the kernel's send buffer. Each time a packet is successfully given to the kernel, this counter is incremented by the bytes copied.
 
@@ -28,7 +28,7 @@ This measures the number of bytes read from the kernel's receive buffer. Each ti
 
 #### Active
 
-The number of session objects that are active in the session pool. (freshly created or currently connected).
+The number of session objects that are active in the session pool. (In a valid state after created, or currently connected).
 
 #### Attempted
 
@@ -44,9 +44,9 @@ The number of connection attempts that have been successful.
 
 ### Histograms
 
-Each histogram bin is labeled using its exclusive upper bound (excluding the last bin). Each upper bound is twice as large as the last, starting at 64 microseconds.
+Each histogram bin is labeled using its exclusive upper bound (not including the last bin). Each upper bound is twice as large as the last, starting at 64 microseconds.
 
-For example, the label `64 us` represents the bin of latencies less than 64 microseconds, and the next bin would have the label `128 us` representing latencies between 64 and 127 microseconds. The last bin with the label `>1 s` holds values between 1 second and greater.
+For example, the label `64 us` represents the bin of latencies less than 64 microseconds, and the next bin has the label `128 us` representing latencies between 64 and 127 microseconds. The last bin with the label `>1 s` holds values between 1 second and greater.
 
 #### Connection Latency
 
