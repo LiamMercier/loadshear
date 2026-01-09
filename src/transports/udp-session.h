@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/udp.hpp>
 
 #include <deque>
 
@@ -13,7 +13,7 @@
 
 namespace asio = boost::asio;
 
-// Performance-aware TCP session class to be stored in a SessionPool.
+// Performance-aware UDP session class to be stored in a SessionPool.
 //
 // Assumptions:
 //
@@ -24,28 +24,37 @@ namespace asio = boost::asio;
 // - Payloads that are shared across session instances are read only
 // - Server packets are handled by an interface passed to the session.
 //
-class TCPSession : public std::enable_shared_from_this<TCPSession>
+class UDPSession : public std::enable_shared_from_this<UDPSession>
 {
 public:
-    using tcp = asio::ip::tcp;
-    using Endpoint = tcp::endpoint;
-    using Endpoints = std::vector<tcp::endpoint>;
+    using udp = asio::ip::udp;
+    using Endpoint = udp::endpoint;
+
+    // Endpoint lists are not meaningful in UDP.
+    using Endpoints = Endpoint;
 
     using DisconnectCallback = std::function<void()>;
 
+    // Everything read by asio's receive will be less than this
+    // anyways due to headers.
+    static constexpr size_t MAX_DATAGRAM_SIZE = 65535 - 8;
+
+    // Typical max network fragment size, without ipv4 and udp header.
+    static constexpr size_t SUGGESTED_PAYLOAD_SIZE = 1500 - 20 - 8;
+
 public:
-    TCPSession(asio::io_context & cntx,
+    UDPSession(asio::io_context & cntx,
                const SessionConfig & config,
                const MessageHandler & message_handler,
                const PayloadManager & payload_manager,
                ShardMetrics & shard_metrics,
                DisconnectCallback & on_disconnect);
 
-    // This class should not be moved or copied.
-    TCPSession(const TCPSession &) = delete;
-    TCPSession & operator=(const TCPSession &) = delete;
-    TCPSession(TCPSession &&) = delete;
-    TCPSession & operator=(TCPSession &&) = delete;
+    // We do not want to move this class.
+    UDPSession(const UDPSession &) = delete;
+    UDPSession & operator=(const UDPSession &) = delete;
+    UDPSession(UDPSession &&) = delete;
+    UDPSession & operator=(UDPSession &&) = delete;
 
     void start(const Endpoints & endpoints);
 
@@ -61,9 +70,7 @@ public:
 private:
     void on_connect();
 
-    void do_read_header();
-
-    void do_read_body();
+    void do_read();
 
     void handle_message();
 
@@ -72,8 +79,6 @@ private:
     void do_write();
 
     void close_session();
-
-    void handle_stream_error(boost::system::error_code ec);
 
 public:
 
@@ -85,7 +90,6 @@ private:
     //
     asio::strand<asio::io_context::executor_type> strand_;
     bool live_{false};
-    bool connecting_{false};
     bool flood_{false};
 
     // For graceful exits.
@@ -97,29 +101,19 @@ private:
     //
     // Packet management.
     //
-    tcp::socket socket_;
+    udp::socket socket_;
 
-    // Header + body size
-    std::vector<uint8_t> incoming_header_;
-    size_t next_payload_size_{0};
-
-    // Ring buffer to hold small messages
-    std::array<uint8_t, MESSAGE_BUFFER_SIZE> body_buffer_;
-
-    // Vector for large messages
-    //
-    // TODO <optimization>: a memory pool like Boost.pool would
-    // be better so we can avoid allocations on large messages.
-    std::vector<uint8_t> large_body_buffer_;
-
-    // Pointer to last server packet (fixed array or vector).
-    uint8_t *body_buffer_ptr_{nullptr};
+    // We hold the maximum expected packet size in this buffer.
+    std::vector<uint8_t> packet_buffer_;
+    size_t packet_size_{0};
 
     std::deque<ResponsePacket> responses_;
 
     // Increasing index into the payloads that need to be sent by this session
     size_t next_payload_index_{0};
 
+    //
+    // TODO <optimization>: we would prefer to store these in a pool.
     PreparedPayload current_payload_;
 
     // Keep track of how many payload writes are requested if not flooding.

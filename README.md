@@ -40,6 +40,10 @@ Or, try running the script against your loopback address.
 loadshear template.ldsh
 ```
 
+## Usage Guide
+
+Loadshear provides various metrics to help assess the current test performance. Users should read the [usage guide](docs/usage.md) for information on interpreting metrics.
+
 ## Loadshear Scripting Language
 
 Loadshear uses a simple Domain Specific Language (DSL) named Loadshear Script for customizing load generation. The `loadshear` application will use any file that follows the DSL, but we suggest naming files with `.ldsh` or `.loadshear` for workspace cleanliness. Examples can be found in the [sdk](sdk) folder.
@@ -67,17 +71,25 @@ We parse the actions linearly in the ORCHESTRATOR block to construct a list of a
 
 ## Defining the Packet Response Protocol
 
-The application assumes that incoming packets are started with a fixed size header containing the body size of the packet. For example, a packet might have the first 8 bytes defining the packet type and body length, and then the body.
+The application assumes that for incoming TCP packets are started with a fixed size header containing the body size of the packet. For example, a packet might have the first 8 bytes defining the packet type and body length, and then the body.
 
 If your protocol uses variable sized headers, you must declare HEADERSIZE such that it will always contain the size field to extract the body.
 
-Each session instance (with reading enabled) will:
+For TCP, each session instance (with reading enabled) will:
 
 - 1. Try to read HEADERSIZE bytes from the socket
 - 2. Try to get the packet's body_size by calling the user defined handle_header function on the bytes read
 - 3. Try to read body_size bytes from the socket to get the body
 - 4. Try to generate a response by giving the header and body as contiguous memory to the defined MessageHandler instance
 - 5. Send the response and restart the loop
+
+As for UDP packets, the entire datagram is given to the message handler.
+
+Each session (with reading enabled) will:
+
+- 1. Try to read a datagram from the socket
+- 2. Try to generate a response by passing the datagram as contiguous memory to the defined MessageHandler instance
+- 3. Send the response and restart the loop
 
 ### Message Handlers
 
@@ -89,8 +101,8 @@ There are two options for HANDLER to use:
 
 2) Use a WebAssembly (WASM) module passed to HANDLER as a file path, just like any packets you have defined. To use the WASM handler, you must provide:
 
-- A valid .wasm module that defines how to read the body
-- A function in the module to read the body size from headers, or a list of index values (defined in the config) to read for constructing the body size.
+- A valid .wasm module that defines how to construct the response
+- A function in the module to read the body size from headers
 
 For specifics on creating a compatible WASM module, see [wasm-modules](docs/wasm-modules.md)
 
@@ -166,6 +178,11 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 
 ## Backlog
 
+- Have SessionPool hold shared memory for transports instead of unique memory buffers
+- Handle Session rejected asio writes to the networking buffer because of backpressure
 - Refactor each CMake subtarget to have modern include semantics
 - Show endpoints/misc in dry run
 - Setup LTO in cmake for release builds
+- Metrics for packets sent alongside bytes sent
+- Churning utils
+- Various optimizations denoted in code

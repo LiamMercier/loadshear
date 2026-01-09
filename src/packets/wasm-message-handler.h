@@ -29,6 +29,7 @@ public:
     ~WASMMessageHandler() = default;
 
 public:
+    // TODO <feature>: allow the user to set index values instead of forcing WASM reads.
     void set_header_parser(HeaderParseFunction parser);
 
 private:

@@ -1,6 +1,8 @@
-#include "tcp-session.h"
+#include "udp-session.h"
 
-TCPSession::TCPSession(asio::io_context & cntx,
+// TODO <feature>: report UDP errors when the endpoint does not exist, etc.
+
+UDPSession::UDPSession(asio::io_context & cntx,
                        const SessionConfig & config,
                        const MessageHandler & message_handler,
                        const PayloadManager & payload_manager,
@@ -9,7 +11,6 @@ TCPSession::TCPSession(asio::io_context & cntx,
 :config_(config),
 strand_(cntx.get_executor()),
 socket_(cntx),
-incoming_header_(config_.header_size),
 message_handler_(message_handler),
 payload_manager_(payload_manager),
 metrics_sink_(shard_metrics),
@@ -17,52 +18,51 @@ write_sample_counter_(config_.packet_sample_rate),
 read_sample_counter_(config_.packet_sample_rate),
 on_disconnect_(on_disconnect)
 {
+    size_t expected_body = (config_.payload_size_limit < MAX_DATAGRAM_SIZE ?
+                            config_.payload_size_limit : MAX_DATAGRAM_SIZE);
+
+    packet_buffer_.resize(expected_body);
 }
 
 // Always the first function called on the Session if any are called.
-void TCPSession::start(const Endpoints & endpoints)
+//
+// NOTE: Connecting over UDP does not work like with TCP, we are only
+//       setting operating system primitives and filtering for this endpoint.
+void UDPSession::start(const Endpoints & endpoints)
 {
     asio::post(strand_, [self = shared_from_this(), endpoints]{
         self->live_ = true;
-        self->connecting_ = true;
 
         self->metrics_sink_.record_connection_attempt();
 
-        using clock = std::chrono::steady_clock;
-        auto conn_start = clock::now();
+        boost::system::error_code ec;
+        self->socket_.open(endpoints.protocol(), ec);
 
-        asio::async_connect(self->socket_, endpoints,
-            asio::bind_executor(self->strand_,
-                [self, conn_start](boost::system::error_code ec,
-                    tcp::endpoint ep){
-                self->connecting_ = false;
+        // If we failed to open, stop.
+        if (ec)
+        {
+            self->metrics_sink_.record_connection_fail();
+            self->close_session();
+            return;
+        }
 
-                // If we failed to connect, stop.
-                if (ec)
-                {
-                    self->metrics_sink_.record_connection_fail();
-                    self->close_session();
-                    return;
-                }
+        self->socket_.connect(endpoints, ec);
 
-                // Record connection time.
-                auto end = clock::now();
+        // If we failed to connect, stop.
+        if (ec)
+        {
+            self->metrics_sink_.record_connection_fail();
+            self->close_session();
+            return;
+        }
 
-                uint64_t latency_us = static_cast<uint64_t>(
-                        std::chrono::duration_cast
-                            <std::chrono::microseconds>(end - conn_start).count()
-                    );
-
-                self->metrics_sink_.record_connection_latency(latency_us);
-                self->metrics_sink_.record_connection_success();
-
-                self->on_connect();
-            }));
+        self->metrics_sink_.record_connection_success();
+        self->on_connect();
     });
 }
 
 // Request enabling flood.
-void TCPSession::flood()
+void UDPSession::flood()
 {
     asio::post(strand_, [self = shared_from_this()]{
 
@@ -77,7 +77,7 @@ void TCPSession::flood()
         self->flood_ = true;
 
         // If safe to start write, go ahead
-        if (self->live_ && !self->connecting_)
+        if (self->live_)
         {
             self->try_start_write();
         }
@@ -86,19 +86,19 @@ void TCPSession::flood()
 }
 
 // Enqueue N payloads to be sent, if they exist.
-void TCPSession::send(size_t N)
+void UDPSession::send(size_t N)
 {
     asio::post(strand_, [self = shared_from_this(), N]{
         self->writes_queued_ += N;
 
-        if (self->live_ && !self->connecting_)
+        if (self->live_)
         {
             self->try_start_write();
         }
     });
 }
 
-void TCPSession::drain()
+void UDPSession::drain()
 {
     asio::post(strand_, [self = shared_from_this()]{
         self->draining_ = true;
@@ -113,20 +113,20 @@ void TCPSession::drain()
 }
 
 // Stop the session and callback to the orchestrator
-void TCPSession::stop()
+void UDPSession::stop()
 {
     asio::post(strand_, [self = shared_from_this()]{
         self->close_session();
     });
 }
 
-// on_connect runs inside of a strand.
-void TCPSession::on_connect()
+// on_connect runs inside of a strand after we open the UDP socket.
+void UDPSession::on_connect()
 {
     // Start the header read loop if setting is enabled.
     if (config_.read_messages)
     {
-        do_read_header();
+        do_read();
     }
 
     if (writing_)
@@ -141,7 +141,7 @@ void TCPSession::on_connect()
 }
 
 // do_read_header runs inside of a strand
-void TCPSession::do_read_header()
+void UDPSession::do_read()
 {
     // Every packet_sample_rate packets, record write latency.
     if (++read_sample_counter_ >= config_.packet_sample_rate)
@@ -149,74 +149,25 @@ void TCPSession::do_read_header()
         read_start_time_ = std::chrono::steady_clock::now();
     }
 
-    asio::async_read(socket_,
-        asio::buffer(incoming_header_, config_.header_size),
+    socket_.async_receive(
+        asio::buffer(packet_buffer_),
         asio::bind_executor(strand_,
             [self = shared_from_this()](boost::system::error_code ec, size_t count){
                 if (ec)
                 {
-                    self->handle_stream_error(ec);
+                    self->close_session();
                     return;
                 }
 
+                self->packet_size_ = count;
                 self->metrics_sink_.record_bytes_read(count);
-
-                // User defined message parsing to get message size
-                std::span<const uint8_t> header_bytes(self->incoming_header_);
-                HeaderResult result = self->message_handler_.parse_header(header_bytes);
-
-                // Handle errors, should only occur if we have a WASM call.
-                if (result.status != HeaderResult::Status::OK)
-                {
-                    self->next_payload_size_ = 0;
-                    self->do_read_header();
-                    return;
-                }
-
-                self->next_payload_size_ = result.length;
 
                 // Handle the server sending messages that are too big.
-                if (self->next_payload_size_ > self->config_.payload_size_limit)
+                if (self->packet_size_ > self->config_.payload_size_limit)
                 {
-                    self->handle_stream_error(ec);
+                    self->close_session();
                     return;
                 }
-
-                self->do_read_body();
-        }));
-}
-
-// do_read_body runs inside a strand
-void TCPSession::do_read_body()
-{
-    // Special case when we have to give a response but no body is expected.
-    if (next_payload_size_ == 0)
-    {
-        handle_message();
-        return;
-    }
-
-    if (next_payload_size_ > MESSAGE_BUFFER_SIZE)
-    {
-        large_body_buffer_.resize(next_payload_size_);
-        body_buffer_ptr_ = large_body_buffer_.data();
-    }
-    else
-    {
-        body_buffer_ptr_ = body_buffer_.data();
-    }
-
-    asio::async_read(socket_,
-        asio::buffer(body_buffer_ptr_, next_payload_size_),
-        asio::bind_executor(strand_,
-            [self = shared_from_this()](boost::system::error_code ec, size_t count){
-                if (ec)
-                {
-                    self->handle_stream_error(ec);
-                    return;
-                }
-
-                self->metrics_sink_.record_bytes_read(count);
 
                 // If we sampled, compute the latency.
                 if (self->read_sample_counter_ > self->config_.packet_sample_rate)
@@ -236,17 +187,19 @@ void TCPSession::do_read_body()
                     self->read_sample_counter_ = 0;
                 }
 
+                // Handle the packet.
                 self->handle_message();
-            }));
+        }));
 }
 
+// TODO <feature>: allow the user to split the header and body.
 // Handles a server packet based on user set rules.
-void TCPSession::handle_message()
+void UDPSession::handle_message()
 {
-    // Give the message handler the header and body of the message.
+    // Give the message handler the packet, there is no header to pass.
     message_handler_.parse_message(
-        std::span<const uint8_t>(incoming_header_.data(), incoming_header_.size()),
-        std::span<const uint8_t>(body_buffer_ptr_, body_buffer_ptr_ + next_payload_size_),
+        std::span<const uint8_t>(packet_buffer_.data(), 0),
+        std::span<const uint8_t>(packet_buffer_.data(), packet_size_),
         [self = shared_from_this()](ResponsePacket response_packet) {
 
             asio::post(self->strand_, [self, response_packet]() {
@@ -258,15 +211,15 @@ void TCPSession::handle_message()
                     self->try_start_write();
                 }
 
-                self->do_read_header();
+                self->do_read();
             });
 
     });
 
 }
 
-// Called from a strand.
-void TCPSession::try_start_write()
+// Called from a strand on send or flood or connect.
+void UDPSession::try_start_write()
 {
     // Clearly we can't start another loop.
     if (writing_)
@@ -286,17 +239,7 @@ void TCPSession::try_start_write()
     }
 }
 
-// There should only be one outstanding write per socket to maximize throughput. Why?
-// - Having N async_write operations at once just increases backpressure on the socket
-// - Filling the socket with data too fast will eventually consume userspace memory
-// - We would not be writing to N different sockets, just N times to a single socket
-// - Posting (N * num_sessions) different async_writes will often overwhelm the thread pool
-// - We may interleave writes to the socket creating garbage data
-//
-// Why not coalese the entire queue of payloads to write everything once then?
-// - The payloads might exceed SO_SNDBUF and so we again consume extra userspace memory
-// - If we wanted to simulate sending a maximally coalesced payload, we can supply a custom packet.
-void TCPSession::do_write()
+void UDPSession::do_write()
 {
     // Send responses first, then payloads.
     if (responses_.size() > 0)
@@ -312,13 +255,13 @@ void TCPSession::do_write()
             write_start_time_ = std::chrono::steady_clock::now();
         }
 
-        asio::async_write(socket_, asio::buffer(packet.data(), packet.size()),
+        socket_.async_send(asio::buffer(packet.data(), packet.size()),
             asio::bind_executor(strand_,
                 [self = shared_from_this(), packet](boost::system::error_code ec,
                                                     size_t count){
                     if (ec)
                     {
-                        self->handle_stream_error(ec);
+                        self->close_session();;
                         return;
                     }
 
@@ -395,13 +338,13 @@ void TCPSession::do_write()
                 write_start_time_ = std::chrono::steady_clock::now();
             }
 
-            asio::async_write(socket_, current_payload_.packet_slices,
+            socket_.async_send(current_payload_.packet_slices,
             asio::bind_executor(strand_,
                 [self = shared_from_this()](boost::system::error_code ec,
                                             size_t count){
                     if (ec)
                     {
-                        self->handle_stream_error(ec);
+                        self->close_session();
                         return;
                     }
 
@@ -446,7 +389,7 @@ void TCPSession::do_write()
 }
 
 // close_session runs in a strand
-void TCPSession::close_session()
+void UDPSession::close_session()
 {
     // Prevent calling twice.
     if (!live_)
@@ -461,10 +404,4 @@ void TCPSession::close_session()
     live_ = false;
 
     on_disconnect_();
-}
-
-void TCPSession::handle_stream_error(boost::system::error_code ec)
-{
-    close_session();
-    return;
 }

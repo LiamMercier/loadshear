@@ -184,7 +184,6 @@ ParseResult Interpreter::verify_script()
     }
     
     // Ensure the session protocol is a valid protocol.
-    // TODO: fill this with more protocols when relevant.
     if (VALID_PROTOCOLS.find(settings.session_protocol)
         == VALID_PROTOCOLS.end())
     {
@@ -201,8 +200,8 @@ ParseResult Interpreter::verify_script()
     }
 
     // Ensure we have a valid port if needed.
-    // TODO: fill this with more protocols when relevant.
-    if (settings.session_protocol == "TCP")
+    if (settings.session_protocol == "TCP"
+        || settings.session_protocol == "UDP")
     {
         if (settings.port == 0)
         {
@@ -220,6 +219,7 @@ ParseResult Interpreter::verify_script()
             return arbitrary_error(std::move(e_msg));
         }
     }
+    // TODO <feature>: else if for HTTP if we decide to support this in a future release.
 
     // We can have header size be zero, but only if read is false.
     if (settings.header_size == 0 && settings.read)

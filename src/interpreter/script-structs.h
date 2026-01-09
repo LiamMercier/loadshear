@@ -11,9 +11,9 @@
 template<typename T>
 inline constexpr bool always_false{false};
 
-// TODO <feature>: Update this when more transports are available.
 const std::unordered_set<std::string> VALID_PROTOCOLS {
-    "TCP"
+    "TCP",
+    "UDP"
 };
 
 // Does not include user defined .wasm files.

@@ -2,11 +2,12 @@
 
 #include "test-helpers.h"
 #include "tcp-sink-server.h"
+#include "udp-sink-server.h"
 
 #include "shard.h"
 #include "payload-manager.h"
 #include "wasm-message-handler.h"
-#include "tcp-session.h"
+#include "all-transports.h"
 
 TEST(TCPShardTests, SingleShardTest)
 {
@@ -609,6 +610,593 @@ TEST(TCPShardTests, MultiShardHeavy)
     EXPECT_EQ(server.lifetime_connections_,
               NUM_SESSIONS * NUM_SHARDS) << "Server did not accept all connections. You may be hitting OS limits!";
 
+    EXPECT_EQ(server.lifetime_received_,
+              packet_size
+              * payloads.size()
+              * NUM_SESSIONS
+              * NUM_SHARDS) << "Server only got "
+                            << server.lifetime_received_
+                            << " of "
+                            << packet_size
+                                * payloads.size()
+                                * NUM_SESSIONS
+                                * NUM_SHARDS
+                            << " bytes!";
+}
+
+TEST(UDPShardTests, SingleShardTest)
+{
+    std::vector<uint8_t> packet_1 = read_binary_file("tests/packets/test-packet-1.bin");
+    size_t packet_size = packet_1.size();
+
+    // Startup basic server.
+    asio::io_context server_cntx;
+    asio::ip::udp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
+
+    UDPSinkServer server(server_cntx,
+                         server_ep);
+
+    std::thread server_thread([&]
+    {
+        server.start();
+        server_cntx.run();
+    });
+
+    // Mock orchestrator, make one shard for testing.
+    int BASE_NUM_PAYLOADS = 8;
+    SessionConfig config(4, 12288, true, false, 100);
+    HostInfo<UDPSession> host_info;
+    host_info.endpoints = {server_ep};
+
+    //
+    // Create the payload manager.
+    //
+    std::vector<PayloadDescriptor> payloads;
+
+    for (int i = 0; i < BASE_NUM_PAYLOADS; i++)
+    {
+        // Alternative between little endian and big endian
+        bool little_endian = (i % 2);
+        uint32_t len = i;
+
+        PacketOperation identity_op_missing_bytes;
+        identity_op_missing_bytes.make_identity(packet_size - len);
+
+        PacketOperation counter_op;
+        counter_op.make_counter(len, little_endian);
+
+        payloads.push_back({{packet_1.data(), packet_1.size()},
+                           std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
+    }
+
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
+    auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
+
+    //
+    // Create the message handler.
+    //
+
+    // Our orchestrator will hold a shared pointer to a WASM engine and copy of the module.
+    //
+    // This can be passed to each Shard.
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
+
+    std::vector<uint8_t> wasm_bytes;
+
+    try
+    {
+        wasm_bytes = read_binary_file("tests/modules/tcp-single-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
+
+    if (!module_tmp)
+    {
+        server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        FAIL();
+    }
+
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
+
+    Shard<UDPSession>::MessageHandlerFactory factory =
+        [engine, module]() -> std::unique_ptr<MessageHandler>
+        {
+            return std::make_unique<WASMMessageHandler>(engine, module);
+        };
+
+    // Create one shard to do work.
+    Shard s1(payload_manager,
+             factory,
+             config,
+             host_info,
+             [&](){ server_cntx.stop(); });
+
+    // Start the shard.
+    s1.start();
+
+    std::vector<ActionDescriptor> actions;
+
+    uint32_t NUM_SESSIONS = 50;
+
+    // Create NUM_SESSION session's. Only thing that matters is count.
+    actions.push_back({
+        ActionType::CREATE,
+        0,
+        NUM_SESSIONS,
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
+    });
+
+    // Connect each session.
+    actions.push_back({
+        ActionType::CONNECT,
+        0,
+        NUM_SESSIONS,
+        0,
+        std::chrono::milliseconds(0)
+    });
+
+    // Enable flood on each session.
+    actions.push_back({
+        ActionType::FLOOD,
+        0,
+        NUM_SESSIONS,
+        0,
+        std::chrono::milliseconds(0)
+    });
+
+    actions.push_back({
+        ActionType::DRAIN,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
+    for (size_t action_index = 0; action_index < actions.size(); action_index++)
+    {
+        const auto & action = actions[action_index];
+        s1.submit_work(action);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    // Mimic orchestrator stop at end of command loop.
+    s1.stop();
+
+    if (server_thread.joinable())
+    {
+        server_thread.join();
+    }
+
+    // Join the shard, this would be done in the Orchestrator after our shard calls back and
+    // says it can be joined. We could just wait on a condition variable in the Orchestrator
+    // and we will not end up eating resources because our thread will be marked as blocked.
+    s1.join();
+
+    EXPECT_EQ(server.lifetime_received_,
+              packet_size * payloads.size() * NUM_SESSIONS) << "Server only got "
+                                                            << server.lifetime_received_
+                                                            << " of "
+                                                            << packet_size
+                                                               * payloads.size()
+                                                               * NUM_SESSIONS
+                                                            << " bytes!";
+}
+
+TEST(UDPShardTests, MultiShardTest)
+{
+    std::vector<uint8_t> packet_1 = read_binary_file("tests/packets/test-packet-1.bin");
+    size_t packet_size = packet_1.size();
+
+    // Startup basic server.
+    asio::io_context server_cntx;
+    asio::ip::udp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
+
+    UDPSinkServer server(server_cntx,
+                         server_ep);
+
+    std::thread server_thread([&]
+    {
+        server.start();
+        server_cntx.run();
+    });
+
+    // Mock orchestrator, make NUM_SHARDS shards for testing.
+    int BASE_NUM_PAYLOADS = 8;
+    int NUM_SHARDS = 4;
+
+    SessionConfig config(4, 12288, true, false, 100);
+    HostInfo<UDPSession> host_info;
+    host_info.endpoints = {server_ep};
+
+    //
+    // Create the payload manager.
+    //
+    std::vector<PayloadDescriptor> payloads;
+
+    for (int i = 0; i < BASE_NUM_PAYLOADS; i++)
+    {
+        // Alternative between little endian and big endian
+        bool little_endian = (i % 2);
+        uint32_t len = i;
+
+        PacketOperation identity_op_missing_bytes;
+        identity_op_missing_bytes.make_identity(packet_size - len);
+
+        PacketOperation counter_op;
+        counter_op.make_counter(len, little_endian);
+
+        payloads.push_back({{packet_1.data(), packet_1.size()},
+                           std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
+    }
+
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
+    auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
+
+    //
+    // Create the message handler.
+    //
+
+    // Our orchestrator will hold a shared pointer to a WASM engine and copy of the module.
+    //
+    // This can be passed to each Shard.
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
+
+    std::vector<uint8_t> wasm_bytes;
+
+    try {
+        wasm_bytes = read_binary_file("tests/modules/tcp-single-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
+
+    if (!module_tmp)
+    {
+        server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        FAIL();
+    }
+
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
+
+    Shard<UDPSession>::MessageHandlerFactory factory =
+        [engine, module]() -> std::unique_ptr<MessageHandler>
+        {
+            return std::make_unique<WASMMessageHandler>(engine, module);
+        };
+
+    // Create NUM_SHARDS shards to do work.
+    std::vector<std::unique_ptr<Shard<UDPSession>>> shards;
+
+    for (int i = 0; i < NUM_SHARDS; i++)
+    {
+        shards.emplace_back(std::make_unique<Shard<UDPSession>>
+                                (payload_manager,
+                                 factory,
+                                 config,
+                                 host_info,
+                                 [&](){ server_cntx.stop(); }));
+    }
+
+    // Start the shards.
+    for (auto & shard : shards)
+    {
+        shard->start();
+    }
+
+    std::vector<ActionDescriptor> actions;
+
+    uint32_t NUM_SESSIONS = 50;
+
+    // Create NUM_SESSION session's. Only thing that matters is count.
+    actions.push_back({
+        ActionType::CREATE,
+        0,
+        NUM_SESSIONS,
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
+    });
+
+    // Connect each session.
+    actions.push_back({
+        ActionType::CONNECT,
+        0,
+        NUM_SESSIONS,
+        0,
+        std::chrono::milliseconds(0)
+    });
+
+    // Enable flood on each session.
+    actions.push_back({
+        ActionType::FLOOD,
+        0,
+        NUM_SESSIONS,
+        0,
+        std::chrono::milliseconds(0)
+    });
+
+    actions.push_back({
+        ActionType::DRAIN,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
+    for (size_t action_index = 0; action_index < actions.size(); action_index++)
+    {
+        const auto & action = actions[action_index];
+
+        for (auto & shard : shards)
+        {
+             shard->submit_work(action);
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    // Mimic orchestrator stop at end of command loop.
+    for (auto & shard : shards)
+    {
+        shard->stop();
+    }
+
+    if (server_thread.joinable())
+    {
+        server_thread.join();
+    }
+
+    // Join the shards, this would be done in the Orchestrator after our shards call back and
+    // say they can be joined. We could just wait on a condition variable in the Orchestrator
+    // and we will not end up eating resources because our thread will be marked as blocked.
+    for (auto & shard : shards)
+    {
+        shard->join();
+    }
+
+    // We expect at least some packets from each session.
+    EXPECT_GE(server.lifetime_received_ * packet_size,
+              NUM_SHARDS) << "Server had mass packet loss";
+}
+
+TEST(UDPShardTests, MultiShardSlow)
+{
+    std::vector<uint8_t> packet_1 = read_binary_file("tests/packets/test-packet-1.bin");
+    size_t packet_size = packet_1.size();
+
+    // Startup basic server.
+    asio::io_context server_cntx;
+    asio::ip::udp::endpoint server_ep(asio::ip::make_address("127.0.0.1"), 12345);
+
+    UDPSinkServer server(server_cntx,
+                         server_ep);
+
+    std::thread server_thread([&]
+    {
+        server.start();
+        server_cntx.run();
+    });
+
+    // Mock orchestrator, make NUM_SHARDS shards for testing.
+    int BASE_NUM_PAYLOADS = 8;
+    int NUM_SHARDS = 4;
+
+    SessionConfig config(4, 12288, true, false, 100);
+    HostInfo<UDPSession> host_info;
+    host_info.endpoints = {server_ep};
+
+    //
+    // Create the payload manager.
+    //
+    std::vector<PayloadDescriptor> payloads;
+
+    for (int i = 0; i < BASE_NUM_PAYLOADS; i++)
+    {
+        // Alternative between little endian and big endian
+        bool little_endian = (i % 2);
+        uint32_t len = i;
+
+        PacketOperation identity_op_missing_bytes;
+        identity_op_missing_bytes.make_identity(packet_size - len);
+
+        PacketOperation counter_op;
+        counter_op.make_counter(len, little_endian);
+
+        payloads.push_back({{packet_1.data(), packet_1.size()},
+                           std::vector<PacketOperation>{identity_op_missing_bytes, counter_op} });
+    }
+
+    std::vector<std::vector<uint16_t>> steps(payloads.size(), {1});
+    auto payload_manager = std::make_shared<PayloadManager>(payloads, steps);
+
+    //
+    // Create the message handler.
+    //
+
+    // Our orchestrator will hold a shared pointer to a WASM engine and copy of the module.
+    //
+    // This can be passed to each Shard.
+    wasmtime::Config WASM_config;
+    auto engine = std::make_shared<wasmtime::Engine>(std::move(WASM_config));
+
+    std::vector<uint8_t> wasm_bytes;
+
+    try {
+        wasm_bytes = read_binary_file("tests/modules/tcp-single-session-parsing.wasm");
+    }
+    catch (const std::exception & error)
+    {
+        std::cerr << error.what() << "\n";
+        FAIL();
+    }
+
+    auto module_tmp = wasmtime::Module::compile(*engine, wasm_bytes);
+
+    if (!module_tmp)
+    {
+        server_cntx.stop();
+
+        if (server_thread.joinable())
+        {
+            server_thread.join();
+        }
+
+        FAIL();
+    }
+
+    auto module = std::make_shared<wasmtime::Module>(module_tmp.unwrap());
+
+    Shard<UDPSession>::MessageHandlerFactory factory =
+        [engine, module]() -> std::unique_ptr<MessageHandler>
+        {
+            return std::make_unique<WASMMessageHandler>(engine, module);
+        };
+
+    // Create NUM_SHARDS shards to do work.
+    std::vector<std::unique_ptr<Shard<UDPSession>>> shards;
+
+    for (int i = 0; i < NUM_SHARDS; i++)
+    {
+        shards.emplace_back(std::make_unique<Shard<UDPSession>>
+                                (payload_manager,
+                                 factory,
+                                 config,
+                                 host_info,
+                                 [&](){ server_cntx.stop(); }));
+    }
+
+    // Start the shards.
+    for (auto & shard : shards)
+    {
+        shard->start();
+    }
+
+    std::vector<ActionDescriptor> actions;
+
+    uint32_t NUM_SESSIONS = 50;
+
+    // Create NUM_SESSION session's. Only thing that matters is count.
+    actions.push_back({
+        ActionType::CREATE,
+        0,
+        NUM_SESSIONS,
+        NUM_SESSIONS,
+        std::chrono::milliseconds(0)
+    });
+
+    // Connect each session.
+    actions.push_back({
+        ActionType::CONNECT,
+        0,
+        NUM_SESSIONS,
+        0,
+        std::chrono::milliseconds(0)
+    });
+
+    for (int i = 0; i < BASE_NUM_PAYLOADS; i++)
+    {
+        // Send one payload with time between each.
+        actions.push_back({
+            ActionType::SEND,
+            0,
+            NUM_SESSIONS,
+            1,
+            std::chrono::milliseconds(0)
+        });
+    }
+
+    actions.push_back({
+        ActionType::DRAIN,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    actions.push_back({
+        ActionType::DISCONNECT,
+        0,
+        NUM_SESSIONS,
+        10*1000,
+        std::chrono::milliseconds(0)
+    });
+
+    // Mimic a 50ms timer loop, orchestrator will have a real asio timer.
+    for (size_t action_index = 0; action_index < actions.size(); action_index++)
+    {
+        const auto & action = actions[action_index];
+
+        for (auto & shard : shards)
+        {
+             shard->submit_work(action);
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    // Mimic orchestrator stop at end of command loop.
+    for (auto & shard : shards)
+    {
+        shard->stop();
+    }
+
+    if (server_thread.joinable())
+    {
+        server_thread.join();
+    }
+
+    // Join the shards, this would be done in the Orchestrator after our shards call back and
+    // say they can be joined. We could just wait on a condition variable in the Orchestrator
+    // and we will not end up eating resources because our thread will be marked as blocked.
+    for (auto & shard : shards)
+    {
+        shard->join();
+    }
+
+    // We expect to not lose packets since we are giving time between our UDP
+    // packet sends.
     EXPECT_EQ(server.lifetime_received_,
               packet_size
               * payloads.size()
