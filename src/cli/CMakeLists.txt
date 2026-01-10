@@ -32,3 +32,7 @@ add_executable(loadshear
 target_link_libraries(loadshear PRIVATE
     cli
 )
+
+# Install the binary
+install(TARGETS loadshear
+        RUNTIME DESTINATION bin)

@@ -134,10 +134,10 @@ sudo apt install rustup
 rustup default stable
 ```
 
-Compile the binary for release
+Compile the binary for release and create packages
 
 ```
-cmake --preset release && cmake --build --preset release-multi
+cmake --preset release && cmake --build --preset release-multi --target package
 ```
 
 Or, to compile for debugging, use
