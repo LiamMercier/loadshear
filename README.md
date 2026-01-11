@@ -2,6 +2,12 @@
 
 Loadshear is a customizable load generator designed for high-concurrency testing of TCP and UDP endpoints.
 
+## Responsible Use
+
+Loadshear is capable of generating high network loads, rapid connection churn, and resource exhaustion if misused. It is designed **only** for use on systems for which you have **explicit authorization* to act on.
+
+Unauthorized use of this tool can cause service disruption and may have legal consequences. If you are unsure whether you are authorized to use Loadshear on an endpoint, stop immediately.
+
 ## Table of Contents
 
 - [Installation](#installation)
