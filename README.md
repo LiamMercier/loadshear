@@ -1,14 +1,40 @@
 # Loadshear
 
-TODO: about
+Loadshear is a customizable load generator designed for high-concurrency testing of TCP and UDP endpoints.
 
-## table of contents
+## Table of Contents
 
-TODO: table of contents
+- [Installation](#installation)
+    - [Linux (Debian-based)](#linux-debian-based)
+    - [Linux (RPM-based)](#linux-rpm-based)
+- [Quickstart](#quickstart)
+- [Usage Guide](#usage-guide)
+- [Loadshear Scripting Language](#loadshear-scripting-language)
+    - [Syntax](#syntax)
+    - [Execution Model](#execution-model)
+- [Defining the Packet Response Protocol](#defining-the-packet-response-protocol)
+    - [Message Handlers](#message-handlers)
+- [Development](#development)
+    - [Compiling](#compiling)
+    - [Running Tests](#running-tests)
 
 ## Installation
 
-TODO: installation guide (should be simple when done).
+### Linux (Debian-based)
+
+Download the Debian package (.deb) and run
+
+```
+sudo apt install ./loadshear-1.0.0.deb
+```
+
+### Linux (RPM-based)
+
+Download the RPM package (.rpm) and run
+
+```
+sudo dnf install ./loadshear-1.0.0.rpm
+```
 
 ## Quickstart
 
@@ -112,13 +138,13 @@ The following documents useful information for developers or power users who wis
 
 ### Compiling
 
-Download build tools and libraries
+Download build tools and libraries, the following is for Debian based systems:
 
 ```
 sudo apt install build-essential cmake libboost-all-dev
 ```
 
-Download Wasmtime, as of writing it seems they are using a shell script.
+Download Wasmtime, as of writing it seems they are using a shell script. Follow their instructions for installation.
 
 ```
 https://github.com/bytecodealliance/wasmtime
@@ -179,10 +205,9 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 ## Backlog
 
 - Have SessionPool hold shared memory for transports instead of unique memory buffers
-- Handle Session rejected asio writes to the networking buffer because of backpressure
 - Refactor each CMake subtarget to have modern include semantics
-- Show endpoints/misc in dry run
 - Setup LTO in cmake for release builds
 - Metrics for packets sent alongside bytes sent
 - Churning utils
-- Various optimizations denoted in code
+- Profile various optimizations denoted in code but not yet tested
+- Design documents for development section
