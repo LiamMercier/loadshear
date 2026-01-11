@@ -4,15 +4,16 @@ Loadshear is a customizable load generator designed for high-concurrency testing
 
 ## Responsible Use
 
-Loadshear is capable of generating high network loads, rapid connection churn, and resource exhaustion if misused. It is designed **only** for use on systems for which you have **explicit authorization* to act on.
+Loadshear is capable of generating high network loads, rapid connection churn, and resource exhaustion if misused. It is designed **only** for use on systems for which you have **explicit authorization** to act on.
 
-Unauthorized use of this tool can cause service disruption and may have legal consequences. If you are unsure whether you are authorized to use Loadshear on an endpoint, stop immediately.
+Misuse use of this tool can cause service disruption and may have legal consequences. If you are unsure of whether you are authorized to use Loadshear on an endpoint, stop immediately.
 
 ## Table of Contents
 
 - [Installation](#installation)
     - [Linux (Debian-based)](#linux-debian-based)
     - [Linux (RPM-based)](#linux-rpm-based)
+    - [Verifying Packages](#verifying-packages)
 - [Quickstart](#quickstart)
 - [Usage Guide](#usage-guide)
 - [Loadshear Scripting Language](#loadshear-scripting-language)
@@ -28,7 +29,7 @@ Unauthorized use of this tool can cause service disruption and may have legal co
 
 ### Linux (Debian-based)
 
-Download the Debian package (.deb) and run
+Download the Debian package (.deb), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
 
 ```
 sudo apt install ./loadshear-1.0.0.deb
@@ -36,10 +37,45 @@ sudo apt install ./loadshear-1.0.0.deb
 
 ### Linux (RPM-based)
 
-Download the RPM package (.rpm) and run
+Download the RPM package (.rpm), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
 
 ```
 sudo dnf install ./loadshear-1.0.0.rpm
+```
+
+### Verifying Packages
+
+All releases of Loadshear have a list of signed SHA256 checksums for each file. Packages are verified by ensuring that the checksums for the files you download are strictly equal to the signed checksums.
+
+First, download and import the following [public key](github.com/LiamMercier/LiamMercier)
+
+```
+gpg --import public.asc
+```
+
+The resulting message should produce a fingerprint (16 bytes) which matches the end of the full key fingerprint, `FF350E63EA2664FB346FA56081B2CF5109324EFC`
+
+If the fingerprint matches, verify the file signature
+
+```
+gpg --verify checksums.asc
+```
+
+This will likely output a message containing the following:
+
+```
+Good signature from "Liam Mercier <LiamMercier@proton.me>" [unknown]
+WARNING: This key is not certified with a trusted signature!
+         There is no indication that the signature belongs to the owner.
+Primary key fingerprint: FF35 0E63 EA26 64FB 346F A560 81B2 CF51 0932 4EFC
+```
+
+This is expected unless you certified the public key after importing.
+
+If verification is successful, compare the SHA256 checksum of the files you downloaded to the signed checksum values, they should match exactly. On Linux you can use the following to get the checksum for all files in the current directory.
+
+```
+sha256sum ./*
 ```
 
 ## Quickstart
