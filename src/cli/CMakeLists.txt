@@ -5,8 +5,6 @@ add_library(cli STATIC
 )
 
 target_include_directories(cli PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(cli PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories(cli PUBLIC wasmtime)
 
 target_link_libraries(cli PUBLIC
     interpreter

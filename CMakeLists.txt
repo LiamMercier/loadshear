@@ -17,6 +17,9 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
 
+# Find Threads just in case we haven't already gotten the library.
+find_package(Threads REQUIRED)
+
 # We need to use the wasmtime c-api since it is a rust project.
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/wasmtime/crates/c-api
                  ${CMAKE_CURRENT_BINARY_DIR}/wasmtime
@@ -30,18 +33,26 @@ FetchContent_Declare(ftxui
     GIT_SHALLOW TRUE
 )
 
-# We're doing this instead of MakeAvailable so we don't
-# install all of these files.
-FetchContent_GetProperties(ftxui)
-if(NOT ftxui_POPULATED)
-    FetchContent_Populate(ftxui)
-    add_subdirectory(${ftxui_SOURCE_DIR} ${ftxui_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+set(FTXUI_ENABLE_INSTALL OFF CACHE BOOL "Disable install")
 
-find_package(Boost REQUIRED COMPONENTS
+FetchContent_MakeAvailable(ftxui)
+
+# Try modern version first
+find_package(Boost CONFIG COMPONENTS
     system
     program_options
 )
+
+# Fallback to our old way of finding boost.
+if (NOT Boost_FOUND)
+    if (POLICY CMP0167)
+        cmake_policy(SET CMP0167 OLD)
+    endif()
+    find_package(Boost REQUIRED COMPONENTS
+        system
+        program_options
+    )
+endif()
 
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found!")
