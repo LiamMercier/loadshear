@@ -2,11 +2,14 @@
 
 #include "cli.h"
 #include "logger.h"
+#include "version.h"
 
 int main(int argc, char** argv)
 {
     // Start the logger.
     Logger::init(LogLevel::INFO);
+
+    Logger::info(std::string{VERSION_PRINTSTRING});
 
     // First, parse command line flags.
     CLIParseResult parse_res = parse_cli(argc, argv);
