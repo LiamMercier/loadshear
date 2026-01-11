@@ -8,6 +8,8 @@ Users should be aware that each Session will require a socket. For large tests, 
 
 Loadshear collects client-side metrics for data throughput, connection latency, etc. However, many of these measurements cannot be used to determine end-to-end metrics. For a proper evaluation, it is advised to collect server side metrics to complement the client side metrics for any thorough analysis of performance.
 
+Loadshear has no proxy support by design, you may need to change firewall or server settings to allow multiple sessions.
+
 ## Metrics
 
 Every 500ms, a snapshot of the collected metrics is displayed in the terminal user interface. Increments can be shown instead of totals if selected with the left and right arrow keys. 
