@@ -23,6 +23,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
     - [Message Handlers](#message-handlers)
 - [Development](#development)
     - [Compiling](#compiling)
+    - [Dependencies](#dependencies)
     - [Running Tests](#running-tests)
 
 ## Installation
@@ -229,6 +230,19 @@ Or omit socket heavy tests
 ```
 ctest --preset debug
 ```
+
+### Dependencies
+
+The following table enumerate dependencies with a known good version for compilation.
+
+| Dependency | Tested Version |     Debian Package     |           License           |
+|------------|----------------|------------------------|-----------------------------|
+| Boost      | 1.83.0         | libboost-all-dev       | Boost Software License 1.0  |
+| FTXUI      | 6.1.9          | N/A (pulled by CMake)  |             MIT             |
+| wasmtime   | 39.0.0         | N/A (install script)   |     Apache License v2.0     |
+| *GTest     | 1.17.0         | N/A (pulled by CMake)  |     BSD 3-Clause License    |
+
+>*GTest is only required for running tests
 
 ### Running Tests
 
