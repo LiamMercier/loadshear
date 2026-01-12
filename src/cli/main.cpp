@@ -2,6 +2,7 @@
 
 #include "cli.h"
 #include "logger.h"
+#include "version.h"
 
 int main(int argc, char** argv)
 {
@@ -17,6 +18,8 @@ int main(int argc, char** argv)
     }
 
     CLIOptions c_ops = std::move(parse_res.options);
+
+    Logger::info(std::string{VERSION_PRINTSTRING});
 
     // Now try to run the tool.
     std::unique_ptr<CLI> cli;

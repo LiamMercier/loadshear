@@ -1,14 +1,87 @@
 # Loadshear
 
-TODO: about
+Loadshear is a customizable load generator designed for high-concurrency testing of TCP and UDP endpoints.
 
-## table of contents
+## Responsible Use
 
-TODO: table of contents
+Loadshear is capable of generating high network loads, rapid connection churn, and resource exhaustion if misused. It is designed **only** for use on systems for which you have **explicit authorization** to act on.
+
+Misuse use of this tool can cause service disruption and may have legal consequences. If you are unsure of whether you are authorized to use Loadshear on an endpoint, stop immediately.
+
+## Table of Contents
+
+- [Installation](#installation)
+    - [Linux (Debian-based)](#linux-debian-based)
+    - [Linux (RPM-based)](#linux-rpm-based)
+    - [Verifying Packages](#verifying-packages)
+- [Quickstart](#quickstart)
+- [Usage Guide](#usage-guide)
+- [Loadshear Scripting Language](#loadshear-scripting-language)
+    - [Syntax](#syntax)
+    - [Execution Model](#execution-model)
+- [Defining the Packet Response Protocol](#defining-the-packet-response-protocol)
+    - [Message Handlers](#message-handlers)
+- [Development](#development)
+    - [Compiling](#compiling)
+    - [Dependencies](#dependencies)
+    - [Running Tests](#running-tests)
 
 ## Installation
 
-TODO: installation guide (should be simple when done).
+### Linux (Debian-based)
+
+Download the Debian package (.deb), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
+
+```
+sudo apt install ./loadshear-1.0.0.deb
+```
+
+### Linux (RPM-based)
+
+Download the RPM package (.rpm), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
+
+```
+sudo dnf install ./loadshear-1.0.0.rpm
+```
+
+### Linux (General)
+
+If your package manager is not supported, you can try manually installing Loadshear using the provided tarball. 
+
+### Verifying Packages
+
+All releases of Loadshear have a list of signed SHA256 checksums for each file. Packages are verified by ensuring that the checksums for the files you download are strictly equal to the signed checksums.
+
+First, download and import the following [public key](github.com/LiamMercier/LiamMercier)
+
+```
+gpg --import public.asc
+```
+
+The resulting message should produce a fingerprint (16 bytes) which matches the end of the full key fingerprint, `FF350E63EA2664FB346FA56081B2CF5109324EFC`
+
+If the fingerprint matches, verify the file signature
+
+```
+gpg --verify checksums.asc
+```
+
+This will likely output a message containing the following:
+
+```
+Good signature from "Liam Mercier <LiamMercier@proton.me>" [unknown]
+WARNING: This key is not certified with a trusted signature!
+         There is no indication that the signature belongs to the owner.
+Primary key fingerprint: FF35 0E63 EA26 64FB 346F A560 81B2 CF51 0932 4EFC
+```
+
+This is expected unless you certified the public key after importing.
+
+If verification is successful, compare the SHA256 checksum of the files you downloaded to the signed checksum values, they should match exactly. On Linux you can use the following to get the checksum for all files in the current directory.
+
+```
+sha256sum ./*
+```
 
 ## Quickstart
 
@@ -112,13 +185,13 @@ The following documents useful information for developers or power users who wis
 
 ### Compiling
 
-Download build tools and libraries
+Download build tools and libraries, the following is for Debian based systems:
 
 ```
 sudo apt install build-essential cmake libboost-all-dev
 ```
 
-Download Wasmtime, as of writing it seems they are using a shell script.
+Download Wasmtime, as of writing it seems they are using a shell script. Follow their instructions for installation.
 
 ```
 https://github.com/bytecodealliance/wasmtime
@@ -134,10 +207,10 @@ sudo apt install rustup
 rustup default stable
 ```
 
-Compile the binary for release
+Compile the binary for release and create packages
 
 ```
-cmake --preset release && cmake --build --preset release-multi
+cmake --preset release && cmake --build --preset release-multi --target package
 ```
 
 Or, to compile for debugging, use
@@ -157,6 +230,19 @@ Or omit socket heavy tests
 ```
 ctest --preset debug
 ```
+
+### Dependencies
+
+The following table enumerate dependencies with a known good version for compilation.
+
+| Dependency | Tested Version |     Debian Package     |           License           |
+|------------|----------------|------------------------|-----------------------------|
+| Boost      | 1.83.0         | libboost-all-dev       | Boost Software License 1.0  |
+| FTXUI      | 6.1.9          | N/A (pulled by CMake)  |             MIT             |
+| wasmtime   | 39.0.0         | N/A (install script)   |     Apache License v2.0     |
+| *GTest     | 1.17.0         | N/A (pulled by CMake)  |     BSD 3-Clause License    |
+
+>*GTest is only required for running tests
 
 ### Running Tests
 
@@ -179,10 +265,9 @@ Some tests are hidden behind an environment variable. You can run these with `RU
 ## Backlog
 
 - Have SessionPool hold shared memory for transports instead of unique memory buffers
-- Handle Session rejected asio writes to the networking buffer because of backpressure
 - Refactor each CMake subtarget to have modern include semantics
-- Show endpoints/misc in dry run
 - Setup LTO in cmake for release builds
 - Metrics for packets sent alongside bytes sent
 - Churning utils
-- Various optimizations denoted in code
+- Profile various optimizations denoted in code but not yet tested
+- Design documents for development section
