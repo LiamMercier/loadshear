@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: BSL-1.0
+//
+// Copyright (c) 2026 Liam Mercier
+//
+// This file is released under the Boost Software License - Version 1.0
+
 #pragma once
 #include <stdint.h>
 
