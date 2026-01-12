@@ -5,6 +5,7 @@
 #include <boost/program_options.hpp>
 
 #include "logger.h"
+#include "version.h"
 
 namespace po = boost::program_options;
 
@@ -17,6 +18,8 @@ CLIParseResult parse_cli(int argc, char** argv)
     op_desc.add_options()
         ("help,h",
          "Show options.")
+        ("version,v",
+         "Show version information")
         ("script,s",
          po::value<std::string>(&cli_ops.script_file),
          "Path to your script.")
@@ -54,7 +57,14 @@ CLIParseResult parse_cli(int argc, char** argv)
 
         po::notify(var_map);
 
-        if (var_map.count("help") || cli_ops.script_file.empty())
+        if (var_map.count("version"))
+        {
+            Logger::info(std::string{VERSION_PRINTSTRING});
+
+            res.status = CLIParseResult::ParseStatus::Version;
+            return res;
+        }
+        else if (var_map.count("help") || cli_ops.script_file.empty())
         {
             std::ostringstream oss;
             oss << op_desc;

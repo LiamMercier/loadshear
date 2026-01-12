@@ -19,6 +19,7 @@ struct CLIParseResult
     {
         Ok = 0,
         Help,
+        Version,
         Error
     };
 

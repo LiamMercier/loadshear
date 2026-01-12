@@ -9,8 +9,6 @@ int main(int argc, char** argv)
     // Start the logger.
     Logger::init(LogLevel::INFO);
 
-    Logger::info(std::string{VERSION_PRINTSTRING});
-
     // First, parse command line flags.
     CLIParseResult parse_res = parse_cli(argc, argv);
 
@@ -20,6 +18,8 @@ int main(int argc, char** argv)
     }
 
     CLIOptions c_ops = std::move(parse_res.options);
+
+    Logger::info(std::string{VERSION_PRINTSTRING});
 
     // Now try to run the tool.
     std::unique_ptr<CLI> cli;
