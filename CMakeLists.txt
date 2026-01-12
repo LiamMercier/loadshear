@@ -13,6 +13,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
     )
     add_compile_definitions(DEV_BUILD)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
+    add_link_options($<$<CONFIG:Release>:-s>)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
@@ -88,7 +91,7 @@ set(CPACK_PACKAGE_NAME "loadshear")
 set(CPACK_PACKAGE_VENDOR "Liam Mercier")
 set(CPACK_PACKAGE_CONTACT "LiamMercier@proton.me")
 
-# TODO: CPACK_PACKAGE_DESCRIPTION_SUMMARY
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "a customizable load generator")
 
 # The fact that we're targeteting Linux and making .deb/.rpm files really
 # makes adding Linux to the file redundant.
@@ -128,6 +131,9 @@ set(CPACK_GENERATOR "DEB;RPM")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Liam Mercier <LiamMercier@proton.me>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "net")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+"Loadshear is a customizable load generator designed for
+high-concurrency testing of TCP and UDP endpoints.")
 
 # RPM specific settings
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
