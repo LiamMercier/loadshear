@@ -69,7 +69,7 @@ add_subdirectory(src/orchestrator)
 add_subdirectory(src/interpreter)
 add_subdirectory(src/resolver)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(BUILD_TESTING)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
