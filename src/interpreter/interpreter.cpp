@@ -446,12 +446,16 @@ ParseResult Interpreter::verify_script()
                                             + std::to_string(i)
                                             + "]",
                                             PrintStyle::Reference)
-                                        + " has count less than "
+                                        + " has count "
+                                        + styled_string(
+                                            std::to_string(action.count),
+                                            PrintStyle::BadValue)
+                                        + " less than "
                                         + styled_string("SHARD",
                                                         PrintStyle::Keyword)
                                         + " value "
                                         + styled_string(
-                                            std::to_string(action.count),
+                                            std::to_string(settings.shards),
                                             PrintStyle::Limits);
                     return arbitrary_error(std::move(e_msg));
                 }

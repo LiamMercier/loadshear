@@ -140,7 +140,7 @@ struct SettingsBlock
     bool repeat{false};
     uint32_t packet_sample_rate{0};
 
-    uint32_t shards;
+    uint32_t shards{0};
     uint16_t port{0};
 
     std::string handler_value;
