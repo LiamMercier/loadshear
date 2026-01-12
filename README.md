@@ -43,6 +43,10 @@ Download the RPM package (.rpm), optionally verify the package (see [Verifying P
 sudo dnf install ./loadshear-1.0.0.rpm
 ```
 
+### Linux (General)
+
+If your package manager is not supported, you can try manually installing Loadshear using the provided tarball. 
+
 ### Verifying Packages
 
 All releases of Loadshear have a list of signed SHA256 checksums for each file. Packages are verified by ensuring that the checksums for the files you download are strictly equal to the signed checksums.

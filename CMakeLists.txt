@@ -95,7 +95,8 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "a customizable load generator")
 
 # The fact that we're targeteting Linux and making .deb/.rpm files really
 # makes adding Linux to the file redundant.
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME
+"${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}")
 
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
@@ -125,7 +126,11 @@ install(FILES sdk/wasm/wasm-contract.h
 install(DIRECTORY docs
         DESTINATION share/doc/loadshear)
 
-set(CPACK_GENERATOR "DEB;RPM")
+# Bring over third party licenses.
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/licenses"
+        DESTINATION share/doc/loadshear/third_party)
+
+set(CPACK_GENERATOR "DEB;RPM;TGZ")
 
 # Debian specific settings
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Liam Mercier <LiamMercier@proton.me>")
