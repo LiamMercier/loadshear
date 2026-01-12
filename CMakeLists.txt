@@ -102,6 +102,9 @@ endif()
 
 add_subdirectory(src/cli)
 
+option(BUILD_DEB "Build .deb packages" OFF)
+option(BUILD_RPM "Build .rpm packages" OFF)
+
 # Packaging settings.
 set(CPACK_PACKAGE_NAME "loadshear")
 set(CPACK_PACKAGE_VENDOR "Liam Mercier")
@@ -146,20 +149,32 @@ install(DIRECTORY docs
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/licenses"
         DESTINATION share/doc/loadshear/third_party)
 
-set(CPACK_GENERATOR "DEB;RPM;TGZ")
+set(CPACK_GENERATOR "TGZ")
+
+if(BUILD_DEB)
+    set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
+endif()
+
+if(BUILD_RPM)
+    set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+endif()
 
 # Debian specific settings
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Liam Mercier <LiamMercier@proton.me>")
-set(CPACK_DEBIAN_PACKAGE_SECTION "net")
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
-"Loadshear is a customizable load generator designed for
-high-concurrency testing of TCP and UDP endpoints.")
+if(BUILD_DEB)
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Liam Mercier <LiamMercier@proton.me>")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+    "Loadshear is a customizable load generator designed for
+    high-concurrency testing of TCP and UDP endpoints.")
+endif()
 
 # RPM specific settings
-set(CPACK_RPM_PACKAGE_AUTOREQ ON)
-set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
-set(CPACK_RPM_PACKAGE_AUTOPROV ON)
+if(BUILD_RPM)
+    set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+    set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+    set(CPACK_RPM_PACKAGE_AUTOPROV ON)
+endif()
 
 # Prevent installing read only header library installs
 set(CPACK_INSTALL_CMAKE_PROJECTS

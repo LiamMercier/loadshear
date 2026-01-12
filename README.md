@@ -207,6 +207,20 @@ sudo apt install rustup
 rustup default stable
 ```
 
+Grab the repository and initialize wasmtime.
+
+```
+git clone https://github.com/LiamMercier/loadshear.git
+```
+
+```
+cd loadshear
+```
+
+```
+git submodule update --init --recursive
+```
+
 Compile the binary for release and create packages
 
 ```

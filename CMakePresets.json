@@ -14,7 +14,9 @@
             "binaryDir" : "${sourceDir}/builds/debug",
             "cacheVariables" : {
                 "CMAKE_BUILD_TYPE" : "Debug",
-                "BUILD_TESTING" : "ON"
+                "BUILD_TESTING" : "ON",
+                "BUILD_DEB" : "ON",
+                "BUILD_RPM" : "ON"
             }
         },
 
@@ -24,7 +26,9 @@
             "generator" : "Unix Makefiles",
             "binaryDir" : "${sourceDir}/builds/release",
             "cacheVariables" : {
-                "CMAKE_BUILD_TYPE" : "Release"
+                "CMAKE_BUILD_TYPE" : "Release",
+                "BUILD_DEB" : "ON",
+                "BUILD_RPM" : "ON"
             }
         },
 
@@ -35,7 +39,33 @@
             "binaryDir" : "${sourceDir}/builds/release",
             "cacheVariables" : {
                 "CMAKE_BUILD_TYPE" : "Release",
-                "BUILD_TESTING" : "ON"
+                "BUILD_TESTING" : "ON",
+                "BUILD_DEB" : "ON",
+                "BUILD_RPM" : "ON"
+            }
+        },
+
+        {
+            "name" : "release-deb",
+            "displayName" : "Release (only .deb packages)",
+            "generator" : "Unix Makefiles",
+            "binaryDir" : "${sourceDir}/builds/release",
+            "cacheVariables" : {
+                "CMAKE_BUILD_TYPE" : "Release",
+                "BUILD_DEB" : "ON",
+                "BUILD_RPM" : "OFF"
+            }
+        },
+
+        {
+            "name" : "release-rpm",
+            "displayName" : "Release (only .rpm packages)",
+            "generator" : "Unix Makefiles",
+            "binaryDir" : "${sourceDir}/builds/release",
+            "cacheVariables" : {
+                "CMAKE_BUILD_TYPE" : "Release",
+                "BUILD_DEB" : "OFF",
+                "BUILD_RPM" : "ON"
             }
         }
     ],
@@ -67,6 +97,16 @@
             "name" : "release-tests",
             "configurePreset" : "release-tests",
             "jobs" : 0
+        },
+
+        {
+            "name" : "release-deb",
+            "configurePreset" : "release-deb"
+        },
+
+        {
+            "name" : "release-rpm",
+            "configurePreset" : "release-rpm"
         }
     ],
 
