@@ -111,6 +111,7 @@ add_subdirectory(src/cli)
 
 option(BUILD_DEB "Build .deb packages" OFF)
 option(BUILD_RPM "Build .rpm packages" OFF)
+option(BUILD_FREEBSD  "Build FreeBSD packages" OFF)
 
 # Packaging settings.
 set(CPACK_PACKAGE_NAME "loadshear")
@@ -157,6 +158,12 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/licenses"
         DESTINATION share/doc/loadshear/third_party)
 
 set(CPACK_GENERATOR "TGZ")
+
+if(BUILD_FREEBSD)
+    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        set(CPACK_GENERATOR "${CPACK_GENERATOR};FREEBSD")
+    endif()
+endif()
 
 if(BUILD_DEB)
     set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")

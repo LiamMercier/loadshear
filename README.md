@@ -13,6 +13,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
 - [Installation](#installation)
     - [Linux (Debian-based)](#linux-debian-based)
     - [Linux (RPM-based)](#linux-rpm-based)
+    - [Linux (General)](#linux-general)
     - [Verifying Packages](#verifying-packages)
 - [Quickstart](#quickstart)
 - [Usage Guide](#usage-guide)
@@ -22,8 +23,14 @@ Misuse use of this tool can cause service disruption and may have legal conseque
 - [Defining the Packet Response Protocol](#defining-the-packet-response-protocol)
     - [Message Handlers](#message-handlers)
 - [Development](#development)
+    - [Toolchain Requirements](#toolchain-requirements)
+        - [Good Toolchains](#good-toolchains)
+    - [Downloading Dependencies](#downloading-dependencies)
+        - [Linux (Debian-based)](#linux-debian-based)
+        - [Linux (other distributions)](#linux-other-distributions)
+        - [FreeBSD](#freebsd)
     - [Compiling](#compiling)
-    - [Dependencies](#dependencies)
+    - [Project Dependencies](#project-dependencies)
     - [Running Tests](#running-tests)
 
 ## Installation
@@ -33,7 +40,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
 Download the Debian package (.deb), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
 
 ```
-sudo apt install ./loadshear-1.0.0.deb
+sudo apt install ./loadshear-1.0.0-x86_64.deb
 ```
 
 ### Linux (RPM-based)
@@ -41,12 +48,20 @@ sudo apt install ./loadshear-1.0.0.deb
 Download the RPM package (.rpm), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
 
 ```
-sudo dnf install ./loadshear-1.0.0.rpm
+sudo dnf install ./loadshear-1.0.0-x86_64.rpm
 ```
 
 ### Linux (General)
 
 If your package manager is not supported, you can try manually installing Loadshear using the provided tarball. 
+
+### FreeBSD
+
+You can use the provided .pkg file, or compile from source.
+
+```
+sudo pkg install ./loadshear-1.0.0-x86_64.pkg
+```
 
 ### Verifying Packages
 
@@ -183,9 +198,31 @@ For specifics on creating a compatible WASM module, see [wasm-modules](docs/wasm
 
 The following documents useful information for developers or power users who wish to compile Loadshear.
 
-### Compiling
+### Toolchain Requirements
 
-Download build tools and libraries, the following is for Debian based systems:
+The following is required to build Loadshear on any platform.
+
+- CMake with at least version 3.25
+- C++23 compatible compiler and standard library
+    - You might be able to get away with standard libraries with partial C++23 implementations
+- Rust (to build wasmtime)
+- Git (with submodule support)
+
+#### Good Toolchains
+
+The following is confirmed to work on Debian (6.12.57)
+
+- g++ 14.2.0 (libstdc++ 14.2.0-19) with rustc 1.92.0
+
+The following is confirmed to work on FreeBSD (15.0-RELEASE)
+
+- clang++ 19.1.7 (libc++ 19.1.7) with rustc 1.92.0
+
+### Downloading Dependencies
+
+#### Linux (Debian-based)
+
+Download build tools and libraries
 
 ```
 sudo apt install build-essential cmake libboost-all-dev
@@ -207,7 +244,33 @@ sudo apt install rustup
 rustup default stable
 ```
 
-Grab the repository and initialize wasmtime.
+#### Linux (other distributions)
+
+Consult [Toolchain Requirements](#toolchain-requirements) and [Project Dependencies](#project-dependencies) or look through the Debian instructions for equivalent packages.
+
+#### FreeBSD
+
+Install build tools and libraries
+
+```
+sudo pkg install cmake boost-all git libwasmtime rustup-init
+```
+
+Install rust
+
+```
+rustup-init
+```
+
+Use the following for this terminal session (until done compiling), or set the path automatically in your shell.
+
+```
+. $HOME/.cargo/env
+```
+
+### Compiling
+
+Grab the repository and initialize.
 
 ```
 git clone https://github.com/LiamMercier/loadshear.git
@@ -221,31 +284,25 @@ cd loadshear
 git submodule update --init --recursive
 ```
 
-Compile the binary for release and create packages
+Compile the binary for release
 
 ```
-cmake --preset release && cmake --build --preset release-multi --target package
+cmake --preset release && cmake --build --preset release-multi
 ```
 
-Or, to compile for debugging, use
+To compile for debugging, use
 
 ```
 cmake --preset debug && cmake --build --preset debug-multi
 ```
 
-To run all tests with ctest, set ulimit to a high enough value (~12000) and run
+For deb, rpm, or freebsd packaging, run the corresponding preset
 
 ```
-ctest --preset debug-heavy
+cmake --preset release-deb && cmake --build --preset release-deb --target package
 ```
 
-Or omit socket heavy tests
-
-```
-ctest --preset debug
-```
-
-### Dependencies
+### Project Dependencies
 
 The following table enumerate dependencies with a known good version for compilation.
 
@@ -275,6 +332,24 @@ make strip
 ```
 
 Some tests are hidden behind an environment variable. You can run these with `RUN_HEAVY_GTEST=1` if you wish. Some tests may require more file descriptors than allowed by default, you may need to use `ulimit -n 12000` or something similar.
+
+To compile release tests, use
+
+```
+cmake --preset release-tests && cmake --build --preset release-tests
+```
+
+To run all debug tests with ctest
+
+```
+ctest --preset debug
+```
+
+Or, for release testing
+
+```
+ctest --preset release-tests
+```
 
 ## Backlog
 
