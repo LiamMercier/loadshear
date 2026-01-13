@@ -665,6 +665,11 @@ Token Parser::consume()
 
 Token Parser::peek()
 {
+    if (token_pos_ >= input_tokens_.size())
+    {
+        return Token{TokenType::Value, "EOF", 0, 0};
+    }
+
     return input_tokens_[token_pos_];
 }
 
