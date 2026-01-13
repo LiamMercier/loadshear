@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <bit>
 
 #include "metrics-snapshot.h"
 

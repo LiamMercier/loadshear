@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <vector>
+#include <span>
 
 #include "resolver-options.h"
 
