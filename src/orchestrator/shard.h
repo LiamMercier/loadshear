@@ -242,8 +242,13 @@ private:
     // Prevent the shard from hanging if we can't close session's.
     void start_force_stop_timer(size_t timeout_ms)
     {
-        boost::system::error_code ignored;
-        stop_timer_.cancel(ignored);
+        try
+        {
+            stop_timer_.cancel();
+        }
+        catch (...)
+        {
+        }
 
         stop_timer_.expires_after(std::chrono::milliseconds(timeout_ms));
         stop_timer_.async_wait(
@@ -260,8 +265,13 @@ private:
     // Called by the session pool callback. Could be used to collect analytics.
     void on_pool_closed()
     {
-        boost::system::error_code ignored;
-        stop_timer_.cancel(ignored);
+        try
+        {
+            stop_timer_.cancel();
+        }
+        catch (...)
+        {
+        }
 
         // Reset work guard now.
         work_guard_.reset();
