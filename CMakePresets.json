@@ -125,6 +125,11 @@
         {
             "name" : "release-rpm",
             "configurePreset" : "release-rpm"
+        },
+
+        {
+            "name" : "release-freebsd",
+            "configurePreset" : "release-freebsd"
         }
     ],
 
