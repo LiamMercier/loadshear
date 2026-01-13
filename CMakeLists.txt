@@ -34,7 +34,14 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_link_options($<$<CONFIG:Release>:-s>)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
+# We need to give FreeBSD the experimental library flag for certain features
+# in this program. This might not be necessary in the future when C++23
+# is given better support
+if(NOT CMAKE_SYSTEM_NAME_STREQUAL "FreeBSD")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -fexperimental-library")
+endif()
 
 # Find Threads just in case we haven't already gotten the library.
 find_package(Threads REQUIRED)
