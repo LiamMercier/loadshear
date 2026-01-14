@@ -14,7 +14,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
     - [Linux (Debian-based)](#linux-debian-based)
     - [Linux (RPM-based)](#linux-rpm-based)
     - [Linux (General)](#linux-general)
-    - [Verifying Packages](#verifying-packages)
+    - [Verifying Releases](#verifying-releases)
 - [Quickstart](#quickstart)
 - [Usage Guide](#usage-guide)
 - [Loadshear Scripting Language](#loadshear-scripting-language)
@@ -57,13 +57,47 @@ If your package manager is not supported, you can try manually installing Loadsh
 
 ### FreeBSD
 
-You can use the provided .pkg file, or compile from source.
+You can use the provided .pkg file, the port files, or compile from source.
+
+#### Package Install
 
 ```
-sudo pkg install ./loadshear-1.0.0-x86_64.pkg
+sudo pkg install ./loadshear-1.0.0-amd64.pkg
 ```
 
-### Verifying Packages
+#### Port Install
+
+If you do not have a ports tree, do this first
+
+```
+sudo git clone https://git.FreeBSD.org/ports.git /usr/ports
+```
+
+Now clone the repository or otherwise download the port files
+
+```
+git clone https://github.com/LiamMercier/loadshear.git
+```
+
+```
+cd loadshear
+```
+
+```
+sudo cp -R ./packaging/freebsd /usr/ports/net/
+```
+
+Build and install
+
+```
+cd /usr/ports/net/loadshear
+```
+
+```
+sudo make install clean
+```
+
+### Verifying Releases
 
 All releases of Loadshear have a list of signed SHA256 checksums for each file. Packages are verified by ensuring that the checksums for the files you download are strictly equal to the signed checksums.
 
@@ -286,11 +320,15 @@ To compile for debugging, use
 cmake --preset debug && cmake --build --preset debug-multi
 ```
 
-For deb, rpm, or freebsd packaging, run the corresponding preset
+For deb, rpm, or freebsd packaging with cpack, run the corresponding preset
 
 ```
 cmake --preset release-deb && cmake --build --preset release-deb --target package
 ```
+
+### FreeBSD packaging
+
+You can use cmake to create a .pkg with cpack, or you can use the port. 
 
 ### Project Dependencies
 

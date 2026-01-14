@@ -200,7 +200,7 @@ endif()
 
 # FreeBSD package settings
 if(BUILD_FREEBSD)
-    set(CPACK_FREEBSD_PACKAGE_LICENSE )
+    set(CPACK_FREEBSD_PACKAGE_LICENSE GPL-3.0-only)
 endif()
 
 # Prevent installing read only header library installs
