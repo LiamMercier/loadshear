@@ -39,6 +39,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     # If building from port, we skip (set BUILD_FREEBSD off)
     if(SET_OPTIMIZATIONS)
+        include(CheckIPOSupported)
+
+        check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+
+        if(IPO_SUPPORTED)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+        else()
+            message(WARNING "LTO/IPO not supported")
+        endif()
+
         add_compile_options($<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-O2>)
         add_link_options($<$<CONFIG:Release>:-s>)
     endif()
