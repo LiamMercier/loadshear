@@ -24,17 +24,36 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BUILD_DEB "Build .deb packages" OFF)
+option(BUILD_RPM "Build .rpm packages" OFF)
+option(BUILD_FREEBSD  "Build FreeBSD packages" OFF)
+
+# Port file should set this to off.
+option(SET_OPTIMIZATIONS "Set compiler to strip, optimize" OFF)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS_DEBUG
         "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-omit-frame-pointer"
     )
     add_compile_definitions(DEV_BUILD)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
-    add_link_options($<$<CONFIG:Release>:-s>)
+    # If building from port, we skip (set BUILD_FREEBSD off)
+    if(SET_OPTIMIZATIONS)
+        add_compile_options($<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-O2>)
+        add_link_options($<$<CONFIG:Release>:-s>)
+    endif()
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-interference-size")
+endif()
+
+# We need to give FreeBSD the experimental library flag for certain features
+# in this program. This might not be necessary in the future when C++23
+# is given better support
+if(BUILD_FREEBSD)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexperimental-library")
+endif()
 
 # Find Threads just in case we haven't already gotten the library.
 find_package(Threads REQUIRED)
@@ -102,9 +121,6 @@ endif()
 
 add_subdirectory(src/cli)
 
-option(BUILD_DEB "Build .deb packages" OFF)
-option(BUILD_RPM "Build .rpm packages" OFF)
-
 # Packaging settings.
 set(CPACK_PACKAGE_NAME "loadshear")
 set(CPACK_PACKAGE_VENDOR "Liam Mercier")
@@ -151,6 +167,12 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/licenses"
 
 set(CPACK_GENERATOR "TGZ")
 
+if(BUILD_FREEBSD)
+    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        set(CPACK_GENERATOR "${CPACK_GENERATOR};FREEBSD")
+    endif()
+endif()
+
 if(BUILD_DEB)
     set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
 endif()
@@ -174,6 +196,11 @@ if(BUILD_RPM)
     set(CPACK_RPM_PACKAGE_AUTOREQ ON)
     set(CPACK_RPM_PACKAGE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
     set(CPACK_RPM_PACKAGE_AUTOPROV ON)
+endif()
+
+# FreeBSD package settings
+if(BUILD_FREEBSD)
+    set(CPACK_FREEBSD_PACKAGE_LICENSE GPL-3.0-only)
 endif()
 
 # Prevent installing read only header library installs

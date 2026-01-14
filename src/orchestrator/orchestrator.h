@@ -339,8 +339,13 @@ private:
             asio::post(cntx_, [this](){
                 work_guard_.reset();
 
-                boost::system::error_code ignored;
-                dispatch_timer_.cancel(ignored);
+                try
+                {
+                    dispatch_timer_.cancel();
+                }
+                catch (...)
+                {
+                }
             });
         }
     }
@@ -354,9 +359,14 @@ private:
 
         shutdown_ = true;
 
-        boost::system::error_code ec;
-        dispatch_timer_.cancel(ec);
-        metrics_timer_.cancel(ec);
+        try
+        {
+            dispatch_timer_.cancel();
+            metrics_timer_.cancel();
+        }
+        catch (...)
+        {
+        }
 
         Logger::info("All actions executed, program will spin down.");
 
