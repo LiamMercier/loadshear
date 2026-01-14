@@ -111,6 +111,12 @@ sudo make makesum
 sudo make clean
 ```
 
+You may wish to install the following ahead of time.
+
+```
+sudo pkg install cmake rust boost-libs
+```
+
 Build and install
 
 ```
