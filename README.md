@@ -61,9 +61,11 @@ If your package manager is not supported, you can try manually installing Loadsh
 
 ### FreeBSD
 
-You can use the provided .pkg file, the port files, or compile from source.
+You can use the provided .pkg file, the port files, or compile from source. If you compile from source, you can make your own .pkg file with cmake presets.
 
 #### Package Install
+
+The package file for each release is created with CPack on a FreeBSD machine. Download the pkg file (.pkg), optionally verify the package (see [Verifying Packages](#verifying-packages)), then run
 
 ```
 sudo pkg install ./loadshear-1.0.0-amd64.pkg
@@ -77,7 +79,7 @@ If you do not have a ports tree, do this first
 sudo git clone https://git.FreeBSD.org/ports.git /usr/ports
 ```
 
-Now clone the repository or otherwise download the port files
+Now clone the repository or otherwise download the port files. We need to bring over the Makefile, pkg-plist, and pkg-descr files.
 
 ```
 git clone https://github.com/LiamMercier/loadshear.git
@@ -88,14 +90,28 @@ cd loadshear
 ```
 
 ```
-sudo cp -R ./packaging/freebsd /usr/ports/net/loadshear
+sudo mkdir -p /usr/ports/net/loadshear
 ```
 
-Build and install
+```
+sudo cp ./packaging/freebsd/* /usr/ports/net/loadshear
+```
+
+Generate distinfo for yourself. This project cannot include distinfo since adding a new distinfo invalidates itself (hash changes).
 
 ```
 cd /usr/ports/net/loadshear
 ```
+
+```
+sudo make makesum
+```
+
+```
+sudo make clean
+```
+
+Build and install
 
 ```
 sudo make install clean
