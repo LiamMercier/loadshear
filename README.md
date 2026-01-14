@@ -127,7 +127,7 @@ sudo make install clean
 
 All releases of Loadshear have a list of signed SHA256 checksums for each file. Packages are verified by ensuring that the checksums for the files you download are strictly equal to the signed checksums.
 
-First, download and import the following [public key](github.com/LiamMercier/LiamMercier)
+First, download and import the following [public key](https://github.com/LiamMercier/LiamMercier)
 
 ```
 gpg --import public.asc
