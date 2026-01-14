@@ -1,9 +1,9 @@
 PORTNAME=	loadshear
 DISTVERSION=	1.0.0
 CATEGORIES=	net
-MAINTAINER=	LiamMercier@proton.me
 WWW=		https://github.com/LiamMercier/loadshear
 
+MAINTAINER=	LiamMercier@proton.me
 COMMENT=	a customizable load generator
 LICENSE=	GPLv3
 LICENSE_FILE=	${WRKSRC}/LICENSE
@@ -15,5 +15,6 @@ BUILD_DEPENDS=	rustup-init
 USE_GITHUB=	yes
 GH_ACCOUNT=	LiamMercier
 GH_PROJECT=	loadshear
+GH_TAGNAME=	v1.0.0
 
 .include <bsd.port.mk>

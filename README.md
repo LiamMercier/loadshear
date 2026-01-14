@@ -14,6 +14,9 @@ Misuse use of this tool can cause service disruption and may have legal conseque
     - [Linux (Debian-based)](#linux-debian-based)
     - [Linux (RPM-based)](#linux-rpm-based)
     - [Linux (General)](#linux-general)
+    - [FreeBSD](#freebsd)
+        - [Package Install](#package-install)
+        - [Port Install](#port-install)
     - [Verifying Releases](#verifying-releases)
 - [Quickstart](#quickstart)
 - [Usage Guide](#usage-guide)
@@ -30,6 +33,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
         - [Linux (other distributions)](#linux-other-distributions)
         - [FreeBSD](#freebsd)
     - [Compiling](#compiling)
+    - [FreeBSD Packaging](#freebsd-packaging)
     - [Project Dependencies](#project-dependencies)
     - [Running Tests](#running-tests)
 
@@ -84,7 +88,7 @@ cd loadshear
 ```
 
 ```
-sudo cp -R ./packaging/freebsd /usr/ports/net/
+sudo cp -R ./packaging/freebsd /usr/ports/net/loadshear
 ```
 
 Build and install
@@ -326,7 +330,7 @@ For deb, rpm, or freebsd packaging with cpack, run the corresponding preset
 cmake --preset release-deb && cmake --build --preset release-deb --target package
 ```
 
-### FreeBSD packaging
+### FreeBSD Packaging
 
 You can use cmake to create a .pkg with cpack, or you can use the port. 
 
