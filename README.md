@@ -225,20 +225,10 @@ The following is confirmed to work on FreeBSD (15.0-RELEASE)
 Download build tools and libraries
 
 ```
-sudo apt install build-essential cmake libboost-all-dev
-```
-
-Download Wasmtime, as of writing it seems they are using a shell script. Follow their instructions for installation.
-
-```
-https://github.com/bytecodealliance/wasmtime
+sudo apt install build-essential cmake libboost-all-dev rustup
 ```
 
 Download a compatible rust version for compiling wasmtime.
-
-```
-sudo apt install rustup
-```
 
 ```
 rustup default stable
@@ -253,7 +243,7 @@ Consult [Toolchain Requirements](#toolchain-requirements) and [Project Dependenc
 Install build tools and libraries
 
 ```
-sudo pkg install cmake boost-all git libwasmtime rustup-init
+sudo pkg install cmake boost-all git rustup-init
 ```
 
 Install rust
@@ -360,3 +350,4 @@ ctest --preset release-tests
 - Churning utils
 - Profile various optimizations denoted in code but not yet tested
 - Design documents for development section
+- Switch from vendoring wasmtime to using system library if/when released on debian

@@ -30,7 +30,8 @@
                 "CMAKE_BUILD_TYPE" : "Release",
                 "BUILD_DEB" : "OFF",
                 "BUILD_RPM" : "OFF",
-                "BUILD_FREEBSD" : "OFF"
+                "BUILD_FREEBSD" : "OFF",
+                "SET_OPTIMIZATIONS" : "ON"
             }
         },
 
@@ -44,7 +45,8 @@
                 "BUILD_TESTING" : "ON",
                 "BUILD_DEB" : "OFF",
                 "BUILD_RPM" : "OFF",
-                "BUILD_FREEBSD" : "OFF"
+                "BUILD_FREEBSD" : "OFF",
+                "SET_OPTIMIZATIONS" : "ON"
             }
         },
 
@@ -57,7 +59,8 @@
                 "CMAKE_BUILD_TYPE" : "Release",
                 "BUILD_DEB" : "ON",
                 "BUILD_RPM" : "OFF",
-                "BUILD_FREEBSD" : "OFF"
+                "BUILD_FREEBSD" : "OFF",
+                "SET_OPTIMIZATIONS" : "ON"
             }
         },
 
@@ -70,7 +73,8 @@
                 "CMAKE_BUILD_TYPE" : "Release",
                 "BUILD_DEB" : "OFF",
                 "BUILD_RPM" : "ON",
-                "BUILD_FREEBSD" : "OFF"
+                "BUILD_FREEBSD" : "OFF",
+                "SET_OPTIMIZATIONS" : "ON"
             }
         },
 
@@ -83,7 +87,8 @@
                 "CMAKE_BUILD_TYPE" : "Release",
                 "BUILD_DEB" : "OFF",
                 "BUILD_RPM" : "OFF",
-                "BUILD_FREEBSD" : "ON"
+                "BUILD_FREEBSD" : "ON",
+                "SET_OPTIMIZATIONS" : "ON"
             }
         }
     ],
