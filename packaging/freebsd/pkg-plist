@@ -1,0 +1,13 @@
+bin/loadshear
+%%PORTDOCS%%%%DOCSDIR%%/LICENSE
+%%PORTDOCS%%%%DOCSDIR%%/README.md
+%%PORTDOCS%%%%DOCSDIR%%/examples/scripts/template.ldsh
+%%PORTDOCS%%%%DOCSDIR%%/examples/wasm/wasm-contract.h
+%%PORTDOCS%%%%DOCSDIR%%/docs/CHANGELOG.md
+%%PORTDOCS%%%%DOCSDIR%%/docs/syntax.md
+%%PORTDOCS%%%%DOCSDIR%%/docs/usage.md
+%%PORTDOCS%%%%DOCSDIR%%/docs/wasm-modules.md
+%%PORTDOCS%%%%DOCSDIR%%/third_party/licenses/BOOST_license
+%%PORTDOCS%%%%DOCSDIR%%/third_party/licenses/FTXUI_license
+%%PORTDOCS%%%%DOCSDIR%%/third_party/licenses/GTEST_license
+%%PORTDOCS%%%%DOCSDIR%%/third_party/licenses/WASMTIME_license

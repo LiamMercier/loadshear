@@ -16,7 +16,7 @@ Misuse use of this tool can cause service disruption and may have legal conseque
     - [Linux (General)](#linux-general)
     - [FreeBSD](#freebsd)
         - [Package Install](#package-install)
-        - [Port Install](#port-install)
+        - [Port Install (experimental)](#port-install-experimental)
     - [Verifying Releases](#verifying-releases)
 - [Quickstart](#quickstart)
 - [Usage Guide](#usage-guide)
