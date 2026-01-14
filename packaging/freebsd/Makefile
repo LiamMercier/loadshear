@@ -10,7 +10,7 @@ LICENSE_FILE=	${WRKSRC}/LICENSE
 
 USES=		cmake compiler:c++23-lang
 LIB_DEPENDS=	boost-all
-BUILD_DEPENDS=	rustup-init
+BUILD_DEPENDS=	rustc:lang/rust
 
 USE_GITHUB=	yes
 GH_ACCOUNT=	LiamMercier

@@ -69,7 +69,7 @@ You can use the provided .pkg file, the port files, or compile from source.
 sudo pkg install ./loadshear-1.0.0-amd64.pkg
 ```
 
-#### Port Install
+#### Port Install (experimental)
 
 If you do not have a ports tree, do this first
 
