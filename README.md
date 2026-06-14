@@ -407,6 +407,7 @@ ctest --preset release-tests
 
 ## Backlog
 
+- Evaluate kernel optimizations for linux users, since data is mostly static
 - Have SessionPool hold shared memory for transports instead of unique memory buffers
 - Refactor each CMake subtarget to have modern include semantics
 - Setup LTO in cmake for release builds
